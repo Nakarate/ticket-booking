@@ -60,6 +60,20 @@ CREATE TABLE payments (
     created_at      timestamptz NOT NULL DEFAULT now()
 );
 
+-- Demand log: every booking attempt and its outcome, for the data/marketing
+-- team ("who wanted which seats, and did they get them" — incl. the racers who
+-- lost). Written off the hot path by a background batch writer (analytics.go).
+-- Append-only with no FKs on purpose: it must never fail or block a request, and
+-- it is retained independently of the operational tables it references.
+CREATE TABLE booking_attempts (
+    id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id    uuid NOT NULL,
+    event_id   uuid NOT NULL,
+    seat_ids   text[] NOT NULL,
+    outcome    text NOT NULL,                         -- SUCCESS | SEAT_TAKEN | SALE_NOT_OPEN | HOLD_LIMIT | ERROR
+    created_at timestamptz NOT NULL DEFAULT now()
+);
+
 -- ---------- Indexes (each one earns its write cost) ----------
 
 -- 1. Hot read path: "available seats of this event".
@@ -83,6 +97,9 @@ CREATE INDEX idx_orders_user ON orders(user_id, created_at DESC);
 CREATE INDEX idx_orders_expiry ON orders(expires_at) WHERE status = 'PENDING';
 
 CREATE INDEX idx_order_items_order ON order_items(order_id);
+
+-- 7. Demand analytics: "attempts on this event over time", and outcome rollups.
+CREATE INDEX idx_attempts_event ON booking_attempts(event_id, created_at DESC);
 
 -- ---------- VACUUM tuning for the UPDATE-heavy table ----------
 -- Default autovacuum triggers at ~20% dead tuples: too slow for a

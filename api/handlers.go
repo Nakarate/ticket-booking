@@ -161,7 +161,15 @@ func (a *app) createBooking(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusNotFound, "event_not_found")
 		return
 	}
+
+	// Demand log: record this attempt on a real event and its final outcome,
+	// enqueued off the hot path (logAttempt is non-blocking). Defaults to ERROR;
+	// each return below sets the real outcome before it fires.
+	outcome := "ERROR"
+	defer func() { a.logAttempt(userID, body.EventID, body.SeatIDs, outcome) }()
+
 	if evStatus != "ON_SALE" || time.Now().Before(opensAt) {
+		outcome = "SALE_NOT_OPEN"
 		writeErr(w, http.StatusForbidden, "sale_not_open")
 		return
 	}
@@ -180,6 +188,7 @@ func (a *app) createBooking(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if ok == 0 {
+		outcome = "SEAT_TAKEN"
 		writeErr(w, http.StatusConflict, "seat_taken")
 		return
 	}
@@ -201,6 +210,7 @@ func (a *app) createBooking(w http.ResponseWriter, r *http.Request) {
 	}
 	if heldNow+len(body.SeatIDs) > a.maxHeldSeats {
 		releaseHolds()
+		outcome = "HOLD_LIMIT"
 		writeErr(w, http.StatusTooManyRequests, "hold_limit_exceeded")
 		return
 	}
@@ -240,6 +250,7 @@ func (a *app) createBooking(w http.ResponseWriter, r *http.Request) {
 		releaseHolds()
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" { // unique_violation
+			outcome = "SEAT_TAKEN"
 			writeErr(w, http.StatusConflict, "seat_taken")
 			return
 		}
@@ -249,6 +260,7 @@ func (a *app) createBooking(w http.ResponseWriter, r *http.Request) {
 	if int(tag.RowsAffected()) != len(body.SeatIDs) {
 		// Some seat was SOLD or belongs to another event: all-or-nothing.
 		releaseHolds()
+		outcome = "SEAT_TAKEN"
 		writeErr(w, http.StatusConflict, "seat_taken")
 		return
 	}
@@ -258,6 +270,7 @@ func (a *app) createBooking(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	outcome = "SUCCESS"
 	writeJSON(w, http.StatusCreated, map[string]any{
 		"order_id":   orderID,
 		"expires_at": expiresAt.UTC().Format(time.RFC3339),

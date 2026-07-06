@@ -26,6 +26,7 @@ type app struct {
 	refreshTTL    time.Duration // opaque refresh token lifetime (Redis)
 	maxHeldSeats  int           // per-user cap on concurrent unpaid held seats (anti-hoarding)
 	powDifficulty int           // proof-of-work leading-zero bits on login/register (0 = off)
+	attempts      chan bookingAttempt // buffered demand-log queue, drained by attemptWriter
 }
 
 func getenv(key, fallback string) string {
@@ -97,6 +98,7 @@ func main() {
 		refreshTTL:    time.Duration(refreshSec) * time.Second,
 		maxHeldSeats:  maxHeld,
 		powDifficulty: powDifficulty,
+		attempts:      make(chan bookingAttempt, 10000),
 	}
 
 	mux := http.NewServeMux()
@@ -131,6 +133,7 @@ func main() {
 	// (Redis holds free themselves via TTL.)
 	workerCtx, stopWorker := context.WithCancel(ctx)
 	go a.expiryWorker(workerCtx)
+	go a.attemptWriter(workerCtx) // drains the demand log to Postgres off the hot path
 
 	rl := newRateLimiter(rdb)
 	srv := &http.Server{
