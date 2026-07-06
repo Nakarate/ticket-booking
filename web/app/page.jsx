@@ -404,7 +404,7 @@ export default function Page() {
 // AuthForm — register or log in with email + password. On success it hands the
 // tokens up via onAuthed.
 function AuthForm({ onAuthed }) {
-  const [mode, setMode] = useState("register"); // register | login
+  const [mode, setMode] = useState("login"); // login | register — returning users are the common case
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [err, setErr] = useState("");

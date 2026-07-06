@@ -7,6 +7,8 @@ const { expect } = require("@playwright/test");
  */
 async function openApp(page) {
   await page.goto("/");
+  // The auth form defaults to login; switch to register to create a fresh account.
+  await page.getByTestId("auth-toggle").click();
   const email = `e2e-${Date.now()}-${Math.floor(Math.random() * 1e6)}@test.dev`;
   await page.getByTestId("auth-email").fill(email);
   await page.getByTestId("auth-password").fill("e2e-password-123");

@@ -8,19 +8,19 @@ test.describe("authentication", () => {
     const email = `e2e-auth-${Date.now()}@test.dev`;
     const password = "e2e-password-123";
 
-    // Register (default mode) → lands in the app.
+    // Form defaults to login; switch to register to create the account.
+    await page.getByTestId("auth-toggle").click();
     await page.getByTestId("auth-email").fill(email);
     await page.getByTestId("auth-password").fill(password);
     await page.getByTestId("auth-submit").click();
     await expect(heading(page)).toBeVisible();
 
-    // Logout → back to the auth form.
+    // Logout → back to the auth form (login mode by default).
     await page.getByTestId("logout-btn").click();
     await expect(page.getByTestId("auth-submit")).toBeVisible();
     await expect(heading(page)).toHaveCount(0);
 
-    // Switch to login mode and sign in with the same credentials.
-    await page.getByTestId("auth-toggle").click();
+    // Already in login mode — sign in with the same credentials.
     await page.getByTestId("auth-email").fill(email);
     await page.getByTestId("auth-password").fill(password);
     await page.getByTestId("auth-submit").click();
@@ -31,15 +31,15 @@ test.describe("authentication", () => {
     await page.goto("/");
     const email = `e2e-bad-${Date.now()}@test.dev`;
 
-    // Register first so the account exists.
+    // Switch to register (form defaults to login) so the account exists.
+    await page.getByTestId("auth-toggle").click();
     await page.getByTestId("auth-email").fill(email);
     await page.getByTestId("auth-password").fill("correct-password-1");
     await page.getByTestId("auth-submit").click();
     await expect(heading(page)).toBeVisible();
     await page.getByTestId("logout-btn").click();
 
-    // Now try to log in with the wrong password.
-    await page.getByTestId("auth-toggle").click();
+    // Back in login mode — try the wrong password.
     await page.getByTestId("auth-email").fill(email);
     await page.getByTestId("auth-password").fill("wrong-password-9");
     await page.getByTestId("auth-submit").click();
