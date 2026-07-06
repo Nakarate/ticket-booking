@@ -6,10 +6,11 @@ services:
       POSTGRES_PASSWORD: ticket
       POSTGRES_DB: ticket
     ports:
-      # Bind to localhost only: the datastore has trivial dev creds and no TLS,
-      # so it must not be reachable from the LAN. Host-based `go test`/k6 still
-      # connect via localhost; drop the mapping entirely in production.
-      - "127.0.0.1:5432:5432"
+      # Localhost only (trivial dev creds, no TLS — must not be LAN-reachable).
+      # Host port 5433 to avoid colliding with a native Postgres on 5432; the app
+      # reaches this container in-network as postgres:5432, so this mapping is
+      # only for host-side psql/tests. Drop the mapping entirely in production.
+      - "127.0.0.1:5433:5432"
     volumes:
       - ./db/001_init.sql:/docker-entrypoint-initdb.d/001_init.sql
       - ./db/002_seed.sql:/docker-entrypoint-initdb.d/002_seed.sql

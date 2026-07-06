@@ -1,0 +1,8 @@
+# Never copy host build output / deps into the image — the image runs its own
+# `npm install`. Leaking a host (wrong-arch or stale-version) node_modules over
+# it produces broken, non-reproducible builds.
+node_modules
+.next
+playwright-report
+test-results
+*.log
