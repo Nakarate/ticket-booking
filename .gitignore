@@ -1,0 +1,15 @@
+node_modules/
+.next/
+*.log
+.env
+go.sum
+
+# Playwright test artifacts
+web/playwright-report/
+web/test-results/
+
+# Compiled Go binary (module builds an executable named "api")
+api/api
+
+# Local Claude Code settings (personal, machine-specific)
+.claude/settings.local.json

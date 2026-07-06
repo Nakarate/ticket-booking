@@ -1,0 +1,4 @@
+# Normalize all text files to LF in the repo. The stack builds and runs on
+# Linux (Docker, Go, shell/SQL init scripts), so LF must be the canonical
+# line ending regardless of the checkout platform.
+* text=auto eol=lf

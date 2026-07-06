@@ -1,0 +1,73 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ticket
+      POSTGRES_PASSWORD: ticket
+      POSTGRES_DB: ticket
+    ports:
+      # Bind to localhost only: the datastore has trivial dev creds and no TLS,
+      # so it must not be reachable from the LAN. Host-based `go test`/k6 still
+      # connect via localhost; drop the mapping entirely in production.
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - ./db/001_init.sql:/docker-entrypoint-initdb.d/001_init.sql
+      - ./db/002_seed.sql:/docker-entrypoint-initdb.d/002_seed.sql
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ticket"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      # Localhost only — Redis has no auth here (see postgres note above).
+      - "127.0.0.1:6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build: ./api
+    environment:
+      DATABASE_URL: postgres://ticket:ticket@postgres:5432/ticket?sslmode=disable&pool_max_conns=30
+      REDIS_ADDR: redis:6379
+      APP_ENV: development
+      # DEV ONLY. In production set APP_ENV=production and provide a unique
+      # >=32-char random JWT_SECRET — the app refuses to boot with a weak one.
+      JWT_SECRET: dev-secret-change-in-prod
+      HOLD_TTL_SECONDS: "600"
+      MAX_HELD_SEATS_PER_USER: "8"
+      RATE_RPS: ${RATE_RPS:-500}
+      RATE_BURST: ${RATE_BURST:-5000}
+      # Per-IP limit on /api/login + /api/register. Defaults k6-friendly; in
+      # prod tighten (e.g. AUTH_RATE_RPS=0.2 AUTH_RATE_BURST=5) to stop account spam.
+      AUTH_RATE_RPS: ${AUTH_RATE_RPS:-100}
+      AUTH_RATE_BURST: ${AUTH_RATE_BURST:-2000}
+      # Proof-of-work on login/register: leading-zero bits a client must find
+      # (0 = off). Enable (e.g. POW_DIFFICULTY=18) to make bulk automation costly.
+      POW_DIFFICULTY: ${POW_DIFFICULTY:-0}
+      PORT: "8080"
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  web:
+    build: ./web
+    environment:
+      NEXT_PUBLIC_API: http://localhost:8080
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+
+volumes:
+  pgdata:
