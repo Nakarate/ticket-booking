@@ -13,3 +13,6 @@ api/api
 
 # Local Claude Code settings (personal, machine-specific)
 .claude/settings.local.json
+
+# Local presentation notes (kept on machine, not in repo)
+docs/demo-script.md
