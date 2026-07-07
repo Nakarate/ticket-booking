@@ -61,7 +61,9 @@ func newTestEnv(t *testing.T) *testEnv {
 		db.Exec(c, `DELETE FROM payments WHERE order_id = ANY($1)`, e.orderIDs)
 		db.Exec(c, `DELETE FROM order_items WHERE order_id = ANY($1)`, e.orderIDs)
 		db.Exec(c, `DELETE FROM orders WHERE id = ANY($1)`, e.orderIDs)
+		db.Exec(c, `DELETE FROM booking_attempts WHERE event_id = ANY($1)`, e.eventIDs)
 		db.Exec(c, `DELETE FROM seats WHERE id = ANY($1)`, e.seatIDs)
+		db.Exec(c, `DELETE FROM seats WHERE event_id = ANY($1)`, e.eventIDs) // admin-created seats
 		db.Exec(c, `DELETE FROM events WHERE id = ANY($1)`, e.eventIDs)
 		db.Exec(c, `DELETE FROM users WHERE id = ANY($1)`, e.userIDs)
 		if len(e.holdKeys) > 0 {

@@ -62,6 +62,15 @@ func (a *app) listSeats(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "bad_event_id")
 		return
 	}
+	// Event header lets the UI show the name, sale status, and per-order seat cap.
+	var evName, evStatus string
+	var maxPer int
+	if err := a.db.QueryRow(r.Context(),
+		`SELECT name, status, max_seats_per_order FROM events WHERE id = $1`,
+		eventID).Scan(&evName, &evStatus, &maxPer); err != nil {
+		writeErr(w, http.StatusNotFound, "event_not_found")
+		return
+	}
 	rows, err := a.db.Query(r.Context(), `
 		SELECT id, seat_no, status, price
 		FROM seats WHERE event_id = $1
@@ -103,11 +112,49 @@ func (a *app) listSeats(w http.ResponseWriter, r *http.Request) {
 		// If Redis is down we degrade gracefully: seats render from DB
 		// truth and booking (which requires Redis) will refuse — never oversell.
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"seats": seats})
+	writeJSON(w, http.StatusOK, map[string]any{
+		"event": map[string]any{
+			"id": eventID, "name": evName, "status": evStatus,
+			"max_seats_per_order": maxPer,
+		},
+		"seats": seats,
+	})
 }
 
 func holdKey(eventID, seatID string) string {
 	return "hold:" + eventID + ":" + seatID
+}
+
+// listEvents returns the on-sale events for the customer picker (public).
+func (a *app) listEvents(w http.ResponseWriter, r *http.Request) {
+	rows, err := a.db.Query(r.Context(), `
+		SELECT id, name, starts_at, sale_opens_at, max_seats_per_order
+		FROM events
+		WHERE status = 'ON_SALE'
+		ORDER BY created_at`)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "db_error")
+		return
+	}
+	defer rows.Close()
+
+	type event struct {
+		ID               string    `json:"id"`
+		Name             string    `json:"name"`
+		StartsAt         time.Time `json:"starts_at"`
+		SaleOpensAt      time.Time `json:"sale_opens_at"`
+		MaxSeatsPerOrder int       `json:"max_seats_per_order"`
+	}
+	events := []event{}
+	for rows.Next() {
+		var e event
+		if err := rows.Scan(&e.ID, &e.Name, &e.StartsAt, &e.SaleOpensAt, &e.MaxSeatsPerOrder); err != nil {
+			writeErr(w, http.StatusInternalServerError, "db_error")
+			return
+		}
+		events = append(events, e)
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"events": events})
 }
 
 // ---------------------------------------------------------------- booking
@@ -133,8 +180,10 @@ func (a *app) createBooking(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "bad_request")
 		return
 	}
-	if n := len(body.SeatIDs); n < 1 || n > 4 {
-		writeErr(w, http.StatusBadRequest, "seat_count_must_be_1_to_4")
+	if n := len(body.SeatIDs); n < 1 || n > 20 {
+		// Hard structural bound; the real per-event cap is checked below once we
+		// know the event's max_seats_per_order.
+		writeErr(w, http.StatusBadRequest, "seat_count_out_of_range")
 		return
 	}
 	if !isUUID(body.EventID) {
@@ -154,9 +203,10 @@ func (a *app) createBooking(w http.ResponseWriter, r *http.Request) {
 	// Server-side sale gate: the frontend clock is not a security boundary.
 	var opensAt time.Time
 	var evStatus string
+	var maxPer int
 	err := a.db.QueryRow(r.Context(),
-		`SELECT sale_opens_at, status FROM events WHERE id = $1`,
-		body.EventID).Scan(&opensAt, &evStatus)
+		`SELECT sale_opens_at, status, max_seats_per_order FROM events WHERE id = $1`,
+		body.EventID).Scan(&opensAt, &evStatus, &maxPer)
 	if err != nil {
 		writeErr(w, http.StatusNotFound, "event_not_found")
 		return
@@ -171,6 +221,11 @@ func (a *app) createBooking(w http.ResponseWriter, r *http.Request) {
 	if evStatus != "ON_SALE" || time.Now().Before(opensAt) {
 		outcome = "SALE_NOT_OPEN"
 		writeErr(w, http.StatusForbidden, "sale_not_open")
+		return
+	}
+	if len(body.SeatIDs) > maxPer {
+		outcome = "TOO_MANY_SEATS"
+		writeErr(w, http.StatusBadRequest, "seat_count_exceeds_limit")
 		return
 	}
 

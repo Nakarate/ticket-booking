@@ -58,11 +58,12 @@ func (a *app) issueTokens(ctx context.Context, userID string) (access, refresh s
 	return
 }
 
-func writeTokens(w http.ResponseWriter, status int, userID, access, refresh string) {
-	writeJSON(w, status, map[string]string{
+func writeTokens(w http.ResponseWriter, status int, userID, access, refresh string, isAdmin bool) {
+	writeJSON(w, status, map[string]any{
 		"access_token":  access,
 		"refresh_token": refresh,
 		"user_id":       userID,
+		"is_admin":      isAdmin,
 	})
 }
 
@@ -113,7 +114,7 @@ func (a *app) register(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusInternalServerError, "token_error")
 		return
 	}
-	writeTokens(w, http.StatusCreated, id, access, refresh)
+	writeTokens(w, http.StatusCreated, id, access, refresh, false)
 }
 
 // login verifies the password and issues tokens. Errors are generic
@@ -131,9 +132,10 @@ func (a *app) login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var id, hash string
+	var isAdmin bool
 	err := a.db.QueryRow(r.Context(),
-		`SELECT id, password_hash FROM users WHERE email = $1`,
-		normalizeEmail(body.Email)).Scan(&id, &hash)
+		`SELECT id, password_hash, is_admin FROM users WHERE email = $1`,
+		normalizeEmail(body.Email)).Scan(&id, &hash, &isAdmin)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// Spend the same bcrypt time as a real comparison, then fail — equal
 		// timing whether or not the email exists.
@@ -153,7 +155,7 @@ func (a *app) login(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusInternalServerError, "token_error")
 		return
 	}
-	writeTokens(w, http.StatusOK, id, access, refresh)
+	writeTokens(w, http.StatusOK, id, access, refresh, isAdmin)
 }
 
 // refresh rotates the refresh token: the old one is invalidated and a new
@@ -181,7 +183,8 @@ func (a *app) refresh(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusInternalServerError, "token_error")
 		return
 	}
-	writeTokens(w, http.StatusOK, userID, access, refresh)
+	// is_admin isn't re-sent on refresh; the client keeps what login returned.
+	writeTokens(w, http.StatusOK, userID, access, refresh, false)
 }
 
 // logout revokes a refresh token. Idempotent: unknown token still returns 200.

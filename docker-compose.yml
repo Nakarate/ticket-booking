@@ -52,6 +52,9 @@ services:
       # Proof-of-work on login/register: leading-zero bits a client must find
       # (0 = off). Enable (e.g. POW_DIFFICULTY=18) to make bulk automation costly.
       POW_DIFFICULTY: ${POW_DIFFICULTY:-0}
+      # Bootstrap admin (content management). Upserted on boot; change for prod.
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@demo.local}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin-demo-123456}
       PORT: "8080"
     ports:
       - "8080:8080"

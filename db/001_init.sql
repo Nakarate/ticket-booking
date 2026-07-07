@@ -15,16 +15,18 @@ CREATE TABLE users (
     id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     email         text NOT NULL UNIQUE,
     password_hash text NOT NULL,               -- bcrypt; set at registration
+    is_admin      boolean NOT NULL DEFAULT false, -- gates the /api/admin/* endpoints
     created_at    timestamptz NOT NULL DEFAULT now()
 );
 
 CREATE TABLE events (
-    id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    name          text NOT NULL,
-    starts_at     timestamptz NOT NULL,
-    sale_opens_at timestamptz NOT NULL DEFAULT now(),
-    status        text NOT NULL DEFAULT 'ON_SALE',
-    created_at    timestamptz NOT NULL DEFAULT now()
+    id                  uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    name                text NOT NULL,
+    starts_at           timestamptz NOT NULL,
+    sale_opens_at       timestamptz NOT NULL DEFAULT now(),
+    status              text NOT NULL DEFAULT 'ON_SALE',    -- ON_SALE | CLOSED
+    max_seats_per_order int  NOT NULL DEFAULT 4,            -- per-order seat cap, set by admin
+    created_at          timestamptz NOT NULL DEFAULT now()
 );
 
 CREATE TABLE seats (

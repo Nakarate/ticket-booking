@@ -13,12 +13,13 @@ FROM generate_series(1, 10) AS r,
      generate_series(1, 20) AS c;
 
 -- Big event: 1,000,000 seats for the EXPLAIN ANALYZE demo.
--- 99% SOLD so the partial index has real work to do.
-INSERT INTO events (id, name, starts_at, sale_opens_at)
+-- 99% SOLD so the partial index has real work to do. CLOSED so it stays out of
+-- the customer event picker (it exists only for the DB benchmark, not booking).
+INSERT INTO events (id, name, starts_at, sale_opens_at, status)
 VALUES ('00000000-0000-0000-0000-000000000002',
         'EXPLAIN Demo Arena',
         now() + interval '60 days',
-        now());
+        now(), 'CLOSED');
 
 INSERT INTO seats (event_id, seat_no, status, price)
 SELECT '00000000-0000-0000-0000-000000000002',

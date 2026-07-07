@@ -123,14 +123,25 @@ func main() {
 	mux.HandleFunc("POST /api/login", a.login)
 	mux.HandleFunc("POST /api/refresh", a.refresh)
 	mux.HandleFunc("POST /api/logout", a.logout)
+	mux.HandleFunc("GET /api/events", a.listEvents) // public: on-sale events for the customer picker
 	mux.HandleFunc("GET /api/events/{id}/seats", a.listSeats)
 	mux.HandleFunc("GET /api/orders", a.auth(a.listOrders))
 	mux.HandleFunc("POST /api/bookings", a.auth(a.createBooking))
 	mux.HandleFunc("POST /api/orders/{id}/pay", a.auth(a.payOrder))
 	mux.HandleFunc("DELETE /api/orders/{id}", a.auth(a.cancelOrder))
 
+	// Admin content management (create events/rounds, open/close sale, set the
+	// per-order cap, view sales stats). adminAuth gates every route.
+	mux.HandleFunc("GET /api/admin/events", a.adminAuth(a.listAdminEvents))
+	mux.HandleFunc("POST /api/admin/events", a.adminAuth(a.createAdminEvent))
+	mux.HandleFunc("PATCH /api/admin/events/{id}", a.adminAuth(a.patchAdminEvent))
+
 	// Background worker: expire unpaid orders so seats free up in the DB.
 	// (Redis holds free themselves via TTL.)
+	if err := a.ensureAdmin(ctx); err != nil {
+		log.Println("admin bootstrap:", err)
+	}
+
 	workerCtx, stopWorker := context.WithCancel(ctx)
 	go a.expiryWorker(workerCtx)
 	go a.attemptWriter(workerCtx) // drains the demand log to Postgres off the hot path
@@ -206,7 +217,7 @@ func (a *app) expireOverdueOrders(ctx context.Context) (int64, error) {
 func cors(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", getenv("CORS_ORIGIN", "http://localhost:3000"))
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type, Idempotency-Key, X-PoW-Challenge, X-PoW-Solution")
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusNoContent)
