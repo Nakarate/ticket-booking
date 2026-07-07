@@ -130,7 +130,7 @@ func (a *app) listEvents(w http.ResponseWriter, r *http.Request) {
 	rows, err := a.db.Query(r.Context(), `
 		SELECT id, name, starts_at, sale_opens_at, max_seats_per_order
 		FROM events
-		WHERE status = 'ON_SALE'
+		WHERE status = 'ON_SALE' AND NOT internal
 		ORDER BY created_at`)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, "db_error")

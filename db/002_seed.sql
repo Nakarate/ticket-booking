@@ -15,11 +15,11 @@ FROM generate_series(1, 10) AS r,
 -- Big event: 1,000,000 seats for the EXPLAIN ANALYZE demo.
 -- 99% SOLD so the partial index has real work to do. CLOSED so it stays out of
 -- the customer event picker (it exists only for the DB benchmark, not booking).
-INSERT INTO events (id, name, starts_at, sale_opens_at, status)
+INSERT INTO events (id, name, starts_at, sale_opens_at, status, internal)
 VALUES ('00000000-0000-0000-0000-000000000002',
         'EXPLAIN Demo Arena',
         now() + interval '60 days',
-        now(), 'CLOSED');
+        now(), 'CLOSED', true);
 
 INSERT INTO seats (event_id, seat_no, status, price)
 SELECT '00000000-0000-0000-0000-000000000002',
@@ -29,3 +29,7 @@ SELECT '00000000-0000-0000-0000-000000000002',
 FROM generate_series(1, 1000000) AS g;
 
 ANALYZE seats;
+-- Also analyze events: without stats the planner assumes ~hundreds of events and
+-- seq-scans the whole (1M-row) seats table for the admin dashboard instead of
+-- index-scanning one small event via idx_seats_event (~1300x slower). Cheap here.
+ANALYZE events;

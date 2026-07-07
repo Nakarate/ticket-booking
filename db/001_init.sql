@@ -26,6 +26,7 @@ CREATE TABLE events (
     sale_opens_at       timestamptz NOT NULL DEFAULT now(),
     status              text NOT NULL DEFAULT 'ON_SALE',    -- ON_SALE | CLOSED
     max_seats_per_order int  NOT NULL DEFAULT 4,            -- per-order seat cap, set by admin
+    internal            boolean NOT NULL DEFAULT false,     -- benchmark/fixture events, hidden from the app
     created_at          timestamptz NOT NULL DEFAULT now()
 );
 
@@ -102,6 +103,13 @@ CREATE INDEX idx_order_items_order ON order_items(order_id);
 
 -- 7. Demand analytics: "attempts on this event over time", and outcome rollups.
 CREATE INDEX idx_attempts_event ON booking_attempts(event_id, created_at DESC);
+
+-- 8. Admin sales stats aggregate seats per event across ALL statuses (the partial
+--    idx_seats_available covers only AVAILABLE). This full (event_id) index lets
+--    the dashboard index-scan one small event instead of seq-scanning the whole
+--    seats table (which holds the 1M-row benchmark event). event_id never
+--    changes and seats are insert-once, so its runtime write cost is ~nil.
+CREATE INDEX idx_seats_event ON seats(event_id);
 
 -- ---------- VACUUM tuning for the UPDATE-heavy table ----------
 -- Default autovacuum triggers at ~20% dead tuples: too slow for a

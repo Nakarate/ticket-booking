@@ -59,6 +59,7 @@ func (a *app) listAdminEvents(w http.ResponseWriter, r *http.Request) {
 		       COALESCE(sum(s.price) FILTER (WHERE s.status = 'SOLD'), 0) AS revenue
 		FROM events e
 		LEFT JOIN seats s ON s.event_id = e.id
+		WHERE NOT e.internal
 		GROUP BY e.id
 		ORDER BY e.created_at DESC`)
 	if err != nil {
