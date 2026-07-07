@@ -5,12 +5,12 @@ const API = process.env.NEXT_PUBLIC_API || "http://localhost:8080";
 const DEFAULT_EVENT_ID = "00000000-0000-0000-0000-000000000001";
 const DEFAULT_MAX_SEATS = 4;
 
-const COLORS = {
-  AVAILABLE: { bg: "#16211f", border: "#2f8f6f", text: "#8fd9bd" },
-  HELD: { bg: "#2a2113", border: "#b8860b", text: "#e6c477" },
-  SOLD: { bg: "#1a1a1a", border: "#333", text: "#555" },
-  SELECTED: { bg: "#2f8f6f", border: "#5fd9a8", text: "#0c1512" },
-};
+const LEGEND = [
+  ["ว่าง", "AVAILABLE"],
+  ["เลือกอยู่", "SELECTED"],
+  ["มีคนถืออยู่", "HELD"],
+  ["ขายแล้ว", "SOLD"],
+];
 
 // Tokens live in localStorage for this demo. Production hardening: keep the
 // long-lived refresh token in an httpOnly cookie instead (needs HTTPS +
@@ -110,8 +110,6 @@ export default function Page() {
     setAdminView(false);
   }, [setAuth]);
 
-  // Public list of on-sale events for the picker. Keeps the current selection if
-  // it's still on sale, else falls back to the demo event or the first one.
   const loadEvents = useCallback(() => {
     fetch(`${API}/api/events`)
       .then((r) => r.json())
@@ -146,7 +144,6 @@ export default function Page() {
       .catch(() => {});
   }, [authFetch]);
 
-  // Seat map polling + orders + event list, only once authenticated.
   useEffect(() => {
     if (!auth) return;
     loadEvents();
@@ -156,7 +153,6 @@ export default function Page() {
     return () => clearInterval(t);
   }, [auth, loadEvents, loadSeats, loadOrders]);
 
-  // Switching events clears any in-progress selection/hold.
   useEffect(() => {
     setSelected([]);
     setOrder(null);
@@ -252,26 +248,6 @@ export default function Page() {
     .filter((s) => selected.includes(s.id))
     .reduce((sum, s) => sum + Number(s.price), 0);
 
-  const seatStyle = (s) => {
-    const state = selected.includes(s.id) ? "SELECTED" : s.status;
-    const c = COLORS[state] || COLORS.SOLD;
-    return {
-      width: 30,
-      height: 30,
-      borderRadius: 7,
-      border: `1px solid ${c.border}`,
-      background: c.bg,
-      color: c.text,
-      fontSize: 9,
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      cursor: s.status === "AVAILABLE" && !order ? "pointer" : "default",
-      userSelect: "none",
-      transition: "transform .08s",
-    };
-  };
-
   const fmt = (sec) =>
     `${String(Math.floor(sec / 60)).padStart(2, "0")}:${String(sec % 60).padStart(2, "0")}`;
 
@@ -281,196 +257,120 @@ export default function Page() {
   const showAdmin = adminView && auth.is_admin;
 
   return (
-    <main style={{ maxWidth: 920, margin: "0 auto", padding: "40px 20px 80px" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16 }}>
+    <main className="shell">
+      <header className="topbar anim-rise">
         <div>
-          <p style={{ letterSpacing: 4, fontSize: 11, color: "#8a877d", margin: 0 }}>
-            {showAdmin ? "ADMIN · จัดการงาน" : "FLASH SALE · NOW OPEN"}
-          </p>
-          <h1 style={{ fontSize: 34, fontWeight: 500, margin: "6px 0 2px" }}>
-            {showAdmin ? "แผงจัดการงานแสดง" : eventName}
-          </h1>
-          <p style={{ color: "#8a877d", marginTop: 0 }}>
-            เข้าสู่ระบบเป็น <span style={{ color: "#c9c6bb" }}>{auth.email || auth.userId}</span>
+          <p className="eyebrow">{showAdmin ? "ADMIN · จัดการงาน" : "Flash Sale · เปิดจองแล้ว"}</p>
+          <h1 className="title">{showAdmin ? "แผงจัดการงานแสดง" : eventName}</h1>
+          <p className="subtitle">
+            เข้าสู่ระบบเป็น <b>{auth.email || auth.userId}</b>
           </p>
         </div>
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        <div className="topbar__actions">
           {auth.is_admin && (
-            <button
-              onClick={() => setAdminView((v) => !v)}
-              data-testid="admin-toggle"
-              style={btn(false)}
-            >
+            <button onClick={() => setAdminView((v) => !v)} data-testid="admin-toggle" className="btn btn--ghost">
               {showAdmin ? "หน้าซื้อตั๋ว" : "จัดการงาน (Admin)"}
             </button>
           )}
-          <button onClick={logout} data-testid="logout-btn" style={btn(false)}>
+          <button onClick={logout} data-testid="logout-btn" className="btn btn--ghost">
             ออกจากระบบ
           </button>
         </div>
-      </div>
+      </header>
 
       {showAdmin ? (
-        <AdminPanel
-          authFetch={authFetch}
-          onChanged={() => {
-            loadEvents();
-            loadSeats();
-          }}
-        />
+        <AdminPanel authFetch={authFetch} onChanged={() => { loadEvents(); loadSeats(); }} />
       ) : (
         <>
-          {/* Event picker */}
           {events.length > 1 && (
-            <div style={{ marginTop: 24, display: "flex", gap: 10, alignItems: "center" }}>
-              <span style={{ fontSize: 13, color: "#8a877d" }}>เลือกงาน</span>
+            <div className="picker anim-rise">
+              <span className="picker__label">เลือกงาน</span>
               <select
                 value={eventId}
                 onChange={(e) => setEventId(e.target.value)}
                 data-testid="event-select"
-                style={{ ...input, padding: "8px 12px", flex: 1, maxWidth: 360 }}
+                className="select"
               >
                 {events.map((e) => (
-                  <option key={e.id} value={e.id}>
-                    {e.name}
-                  </option>
+                  <option key={e.id} value={e.id}>{e.name}</option>
                 ))}
               </select>
             </div>
           )}
 
-          {/* Stage */}
-          <div
-            style={{
-              margin: "34px auto 26px",
-              width: "70%",
-              height: 34,
-              borderRadius: "0 0 120px 120px",
-              background: "#1b222a",
-              border: "1px solid #2c3540",
-              borderTop: "none",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "#77828e",
-              fontSize: 12,
-              letterSpacing: 6,
-            }}
-          >
-            STAGE
+          <div className="stage anim-rise">STAGE</div>
+
+          <div className="seatmap-wrap">
+            <div className={`seatmap${order ? " locked" : ""}`}>
+              {Object.entries(rows).map(([row, list]) => (
+                <div key={row} className="seat-row">
+                  <span className="seat-row__label">{row}</span>
+                  {list.map((s) => (
+                    <div
+                      key={s.id}
+                      className="seat"
+                      title={`${s.seat_no} · ฿${s.price}`}
+                      onClick={() => toggleSeat(s)}
+                      data-testid="seat"
+                      data-seat-no={s.seat_no}
+                      data-status={s.status}
+                      data-selected={selected.includes(s.id)}
+                    >
+                      {s.seat_no.match(/\d+$/)?.[0]}
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
           </div>
 
-          {/* Seat map */}
-          <div style={{ display: "grid", gap: 7, justifyContent: "center" }}>
-            {Object.entries(rows).map(([row, list]) => (
-              <div key={row} style={{ display: "flex", gap: 7, alignItems: "center" }}>
-                <span style={{ width: 16, fontSize: 11, color: "#666" }}>{row}</span>
-                {list.map((s) => (
-                  <div
-                    key={s.id}
-                    title={`${s.seat_no} · ฿${s.price}`}
-                    style={seatStyle(s)}
-                    onClick={() => toggleSeat(s)}
-                    data-testid="seat"
-                    data-seat-no={s.seat_no}
-                    data-status={s.status}
-                    data-selected={selected.includes(s.id)}
-                  >
-                    {s.seat_no.match(/\d+$/)?.[0]}
-                  </div>
-                ))}
-              </div>
-            ))}
-          </div>
-
-          {/* Legend */}
-          <div style={{ display: "flex", gap: 18, justifyContent: "center", marginTop: 22, fontSize: 12, color: "#9a978c" }}>
-            {[["ว่าง", COLORS.AVAILABLE], ["เลือกอยู่", COLORS.SELECTED], ["มีคนถืออยู่", COLORS.HELD], ["ขายแล้ว", COLORS.SOLD]].map(([label, c]) => (
-              <span key={label} style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                <span style={{ width: 12, height: 12, borderRadius: 4, background: c.bg, border: `1px solid ${c.border}` }} />
+          <div className="legend">
+            {LEGEND.map(([label, state]) => (
+              <span key={label}>
+                <i data-status={state} />
                 {label}
               </span>
             ))}
           </div>
 
-          {/* Action bar */}
-          <div
-            style={{
-              marginTop: 34,
-              padding: "18px 22px",
-              borderRadius: 14,
-              background: "#171d23",
-              border: "1px solid #262e37",
-              display: "flex",
-              alignItems: "center",
-              gap: 16,
-              flexWrap: "wrap",
-            }}
-          >
+          <div className="actionbar">
             {!order ? (
               <>
-                <div style={{ flex: 1, minWidth: 200 }}>
-                  <div style={{ fontSize: 13, color: "#9a978c" }}>
-                    เลือกแล้ว {selected.length}/{maxSeats} ที่นั่ง
+                <div className="actionbar__info">
+                  <div className="actionbar__hint">
+                    เลือกแล้ว <span className="count-tag">{selected.length}/{maxSeats}</span> ที่นั่ง
                   </div>
-                  <div style={{ fontSize: 22 }}>฿{total.toLocaleString()}</div>
+                  <div className="actionbar__big tnum">฿{total.toLocaleString()}</div>
                 </div>
-                <button onClick={book} disabled={selected.length === 0} style={btn(selected.length > 0)}>
+                <button onClick={book} disabled={selected.length === 0} className="btn btn--primary">
                   จองที่นั่ง (hold 10 นาที)
                 </button>
               </>
             ) : (
               <>
-                <div style={{ flex: 1, minWidth: 200 }}>
-                  <div style={{ fontSize: 13, color: "#9a978c" }}>ถือที่นั่งไว้ให้คุณ — ชำระเงินภายใน</div>
-                  <div style={{ fontSize: 26, fontVariantNumeric: "tabular-nums", color: remaining < 60 ? "#e08a4f" : "#e8e6df" }}>
-                    {fmt(remaining)}
-                  </div>
+                <div className="actionbar__info">
+                  <div className="actionbar__hint">ถือที่นั่งไว้ให้คุณ — ชำระเงินภายใน</div>
+                  <div className={`countdown${remaining < 60 ? " warn" : ""}`}>{fmt(remaining)}</div>
                 </div>
-                <button onClick={pay} style={btn(true)}>ชำระเงิน (mock)</button>
-                <button onClick={cancel} style={btn(false)}>ยกเลิก</button>
+                <button onClick={pay} className="btn btn--primary">ชำระเงิน (mock)</button>
+                <button onClick={cancel} className="btn btn--ghost">ยกเลิก</button>
               </>
             )}
           </div>
 
-          {msg && (
-            <p style={{ marginTop: 16, padding: "10px 14px", background: "#20262c", borderRadius: 10, fontSize: 14 }}>
-              {msg}
-            </p>
-          )}
+          {msg && <p className="msg">{msg}</p>}
 
-          {/* My bookings — GET /api/orders (idx_orders_user) */}
           {orders.length > 0 && (
-            <section style={{ marginTop: 28 }}>
-              <h2 style={{ fontSize: 15, fontWeight: 500, color: "#9a978c", letterSpacing: 1 }}>การจองของฉัน</h2>
-              <div style={{ display: "grid", gap: 8 }}>
+            <section>
+              <h2 className="section-h">การจองของฉัน</h2>
+              <div className="orders">
                 {orders.map((o) => (
-                  <div
-                    key={o.id}
-                    style={{
-                      display: "flex",
-                      gap: 12,
-                      alignItems: "center",
-                      padding: "10px 14px",
-                      borderRadius: 10,
-                      background: "#171d23",
-                      border: "1px solid #232b33",
-                      fontSize: 13,
-                    }}
-                  >
-                    <span
-                      style={{
-                        padding: "2px 10px",
-                        borderRadius: 20,
-                        fontSize: 11,
-                        background: o.status === "PAID" ? "#1d3a2e" : o.status === "PENDING" ? "#332a15" : "#26262a",
-                        color: o.status === "PAID" ? "#7ed9ac" : o.status === "PENDING" ? "#e0b45f" : "#8a8a90",
-                      }}
-                    >
+                  <div key={o.id} className="order">
+                    <span className={`pill ${o.status === "PAID" ? "pill--paid" : o.status === "PENDING" ? "pill--pending" : "pill--other"}`}>
                       {o.status}
                     </span>
-                    <span style={{ flex: 1, color: "#c9c6bb" }}>{o.seat_nos || "—"}</span>
-                    <span style={{ fontVariantNumeric: "tabular-nums" }}>฿{Number(o.amount).toLocaleString()}</span>
+                    <span className="order__seats">{o.seat_nos || "—"}</span>
+                    <span className="tnum">฿{Number(o.amount).toLocaleString()}</span>
                   </div>
                 ))}
               </div>
@@ -497,9 +397,7 @@ function AdminPanel({ authFetch, onChanged }) {
       .catch(() => {});
   }, [authFetch]);
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  useEffect(() => { load(); }, [load]);
 
   const patch = async (id, body) => {
     const res = await authFetch(`${API}/api/admin/events/${id}`, {
@@ -507,13 +405,8 @@ function AdminPanel({ authFetch, onChanged }) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
-    if (res.ok) {
-      load();
-      onChanged?.();
-    } else {
-      const d = await res.json().catch(() => ({}));
-      setMsg(`แก้ไขไม่สำเร็จ: ${d.error || res.status}`);
-    }
+    if (res.ok) { load(); onChanged?.(); }
+    else { const d = await res.json().catch(() => ({})); setMsg(`แก้ไขไม่สำเร็จ: ${d.error || res.status}`); }
   };
 
   const totals = events.reduce(
@@ -522,9 +415,8 @@ function AdminPanel({ authFetch, onChanged }) {
   );
 
   return (
-    <div style={{ marginTop: 26 }}>
-      {/* Summary stat tiles */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12 }}>
+    <div className="anim-rise">
+      <div className="stat-grid">
         <StatTile label="งานทั้งหมด" value={events.length} />
         <StatTile label="ที่นั่งขายแล้ว" value={totals.sold.toLocaleString()} />
         <StatTile label="รายได้รวม" value={`฿${totals.revenue.toLocaleString()}`} accent />
@@ -534,25 +426,14 @@ function AdminPanel({ authFetch, onChanged }) {
         authFetch={authFetch}
         busy={busy}
         setBusy={setBusy}
-        onCreated={() => {
-          load();
-          onChanged?.();
-          setMsg("สร้างงานใหม่แล้ว");
-        }}
+        onCreated={() => { load(); onChanged?.(); setMsg("สร้างงานใหม่แล้ว"); }}
         setMsg={setMsg}
       />
 
-      {msg && (
-        <p style={{ marginTop: 14, padding: "10px 14px", background: "#20262c", borderRadius: 10, fontSize: 14 }}>
-          {msg}
-        </p>
-      )}
+      {msg && <p className="msg">{msg}</p>}
 
-      {/* Event rows */}
-      <div style={{ marginTop: 22, display: "grid", gap: 12 }}>
-        {events.map((e) => (
-          <EventRow key={e.id} e={e} onPatch={patch} />
-        ))}
+      <div className="admin-list">
+        {events.map((e) => <EventRow key={e.id} e={e} onPatch={patch} />)}
       </div>
     </div>
   );
@@ -560,11 +441,9 @@ function AdminPanel({ authFetch, onChanged }) {
 
 function StatTile({ label, value, accent }) {
   return (
-    <div style={{ padding: "16px 18px", borderRadius: 12, background: "#171d23", border: "1px solid #262e37" }}>
-      <div style={{ fontSize: 12, color: "#8a877d", marginBottom: 6 }}>{label}</div>
-      <div style={{ fontSize: 24, fontWeight: 600, fontVariantNumeric: "tabular-nums", color: accent ? "#7ed9ac" : "#e8e6df" }}>
-        {value}
-      </div>
+    <div className="stat">
+      <div className="stat__label">{label}</div>
+      <div className={`stat__value${accent ? " accent" : ""}`}>{value}</div>
     </div>
   );
 }
@@ -575,62 +454,31 @@ function EventRow({ e, onPatch }) {
   const onSale = e.status === "ON_SALE";
 
   return (
-    <div style={{ padding: "16px 18px", borderRadius: 12, background: "#171d23", border: "1px solid #262e37" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+    <div className="event-card">
+      <div className="event-card__top">
         <div>
-          <div style={{ fontSize: 16, fontWeight: 500 }}>{e.name}</div>
-          <div style={{ fontSize: 12, color: "#8a877d" }}>
+          <div className="event-card__name">{e.name}</div>
+          <div className="event-card__date">
             แสดง {new Date(e.starts_at).toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "numeric" })}
           </div>
         </div>
-        {/* status pill: state carried by label + color, never color alone */}
-        <span
-          style={{
-            padding: "3px 12px",
-            borderRadius: 20,
-            fontSize: 12,
-            background: onSale ? "#1d3a2e" : "#2a2331",
-            color: onSale ? "#7ed9ac" : "#c39ad6",
-          }}
-        >
-          {onSale ? "เปิดขาย" : "ปิดขาย"}
-        </span>
+        <span className={`pill ${onSale ? "pill--onsale" : "pill--closed"}`}>{onSale ? "เปิดขาย" : "ปิดขาย"}</span>
       </div>
 
-      {/* Occupancy meter — single-hue magnitude, sold vs total */}
-      <div style={{ marginTop: 14 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#9a978c", marginBottom: 5 }}>
-          <span>
-            ขายแล้ว {e.sold.toLocaleString()} / {e.total.toLocaleString()} ที่นั่ง ({pct}%)
-          </span>
-          <span style={{ fontVariantNumeric: "tabular-nums", color: "#7ed9ac" }}>฿{Number(e.revenue).toLocaleString()}</span>
-        </div>
-        <div style={{ height: 8, borderRadius: 999, background: "#232b33", overflow: "hidden" }}>
-          <div style={{ height: "100%", width: `${pct}%`, background: "#2f8f6f", borderRadius: 999 }} />
-        </div>
+      <div className="meter-row">
+        <span>ขายแล้ว {e.sold.toLocaleString()} / {e.total.toLocaleString()} ({pct}%)</span>
+        <span className="rev">฿{Number(e.revenue).toLocaleString()}</span>
       </div>
+      <div className="meter"><div className="meter__fill" style={{ width: `${pct}%` }} /></div>
 
-      {/* Controls */}
-      <div style={{ marginTop: 16, display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-        <button
-          onClick={() => onPatch(e.id, { status: onSale ? "CLOSED" : "ON_SALE" })}
-          style={btn(!onSale)}
-        >
+      <div className="event-card__controls">
+        <button onClick={() => onPatch(e.id, { status: onSale ? "CLOSED" : "ON_SALE" })} className={`btn ${onSale ? "btn--ghost" : "btn--primary"}`}>
           {onSale ? "ปิดขาย" : "เปิดขาย"}
         </button>
-        <div style={{ display: "flex", gap: 6, alignItems: "center", fontSize: 13, color: "#9a978c" }}>
+        <div className="cap-edit">
           <span>ที่นั่ง/คน</span>
-          <input
-            type="number"
-            min={1}
-            max={20}
-            value={cap}
-            onChange={(ev) => setCap(Number(ev.target.value))}
-            style={{ ...input, width: 64, padding: "6px 8px" }}
-          />
-          <button onClick={() => onPatch(e.id, { max_seats_per_order: cap })} style={btn(false)}>
-            บันทึก
-          </button>
+          <input type="number" min={1} max={20} value={cap} onChange={(ev) => setCap(Number(ev.target.value))} className="input" />
+          <button onClick={() => onPatch(e.id, { max_seats_per_order: cap })} className="btn btn--ghost">บันทึก</button>
         </div>
       </div>
     </div>
@@ -640,84 +488,59 @@ function EventRow({ e, onPatch }) {
 function CreateEventForm({ authFetch, busy, setBusy, onCreated, setMsg }) {
   const [open, setOpen] = useState(false);
   const [f, setF] = useState({
-    name: "",
-    starts_at: "",
-    rows: 10,
-    seats_per_row: 20,
-    price: 1500,
-    premium_rows: 3,
-    premium_price: 2500,
-    max_seats_per_order: 4,
+    name: "", starts_at: "", rows: 10, seats_per_row: 20,
+    price: 1500, premium_rows: 3, premium_price: 2500, max_seats_per_order: 4,
   });
   const set = (k) => (ev) => setF((s) => ({ ...s, [k]: ev.target.value }));
 
   const submit = async (ev) => {
     ev.preventDefault();
     setMsg("");
-    if (!f.name || !f.starts_at) {
-      setMsg("กรอกชื่องานและวันแสดงก่อน");
-      return;
-    }
+    if (!f.name || !f.starts_at) { setMsg("กรอกชื่องานและวันแสดงก่อน"); return; }
     setBusy(true);
     try {
       const body = {
         name: f.name,
         starts_at: new Date(f.starts_at).toISOString(),
-        rows: Number(f.rows),
-        seats_per_row: Number(f.seats_per_row),
-        price: Number(f.price),
-        premium_rows: Number(f.premium_rows),
-        premium_price: Number(f.premium_price),
-        max_seats_per_order: Number(f.max_seats_per_order),
+        rows: Number(f.rows), seats_per_row: Number(f.seats_per_row),
+        price: Number(f.price), premium_rows: Number(f.premium_rows),
+        premium_price: Number(f.premium_price), max_seats_per_order: Number(f.max_seats_per_order),
       };
       const res = await authFetch(`${API}/api/admin/events`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
       });
-      if (res.status === 201) {
-        setF((s) => ({ ...s, name: "", starts_at: "" }));
-        setOpen(false);
-        onCreated?.();
-      } else {
-        const d = await res.json().catch(() => ({}));
-        setMsg(`สร้างงานไม่สำเร็จ: ${d.error || res.status}`);
-      }
-    } finally {
-      setBusy(false);
-    }
+      if (res.status === 201) { setF((s) => ({ ...s, name: "", starts_at: "" })); setOpen(false); onCreated?.(); }
+      else { const d = await res.json().catch(() => ({})); setMsg(`สร้างงานไม่สำเร็จ: ${d.error || res.status}`); }
+    } finally { setBusy(false); }
   };
 
   if (!open) {
     return (
-      <button onClick={() => setOpen(true)} data-testid="new-event-btn" style={{ ...btn(true), marginTop: 18 }}>
+      <button onClick={() => setOpen(true)} data-testid="new-event-btn" className="btn btn--primary" style={{ marginTop: 18 }}>
         + สร้างงานใหม่
       </button>
     );
   }
 
   const field = (label, key, type = "number") => (
-    <label style={{ display: "grid", gap: 4, fontSize: 12, color: "#9a978c" }}>
+    <label className="field">
       {label}
-      <input type={type} value={f[key]} onChange={set(key)} style={input} />
+      <input type={type} value={f[key]} onChange={set(key)} className="input" />
     </label>
   );
 
   return (
-    <form
-      onSubmit={submit}
-      style={{ marginTop: 18, padding: "20px 22px", borderRadius: 14, background: "#141a20", border: "1px solid #2c3540", display: "grid", gap: 14 }}
-    >
-      <div style={{ fontSize: 15, fontWeight: 500 }}>สร้างงานใหม่ (รอบใหม่)</div>
-      <label style={{ display: "grid", gap: 4, fontSize: 12, color: "#9a978c" }}>
+    <form onSubmit={submit} className="create-form">
+      <h3>สร้างงานใหม่ (รอบใหม่)</h3>
+      <label className="field">
         ชื่องาน
-        <input value={f.name} onChange={set("name")} data-testid="ev-name" placeholder="เช่น Live in Bangkok 2026 — Night 2" style={input} />
+        <input value={f.name} onChange={set("name")} data-testid="ev-name" placeholder="เช่น Live in Bangkok 2026 — Night 2" className="input" />
       </label>
-      <label style={{ display: "grid", gap: 4, fontSize: 12, color: "#9a978c" }}>
+      <label className="field">
         วันเวลาแสดง
-        <input type="datetime-local" value={f.starts_at} onChange={set("starts_at")} data-testid="ev-date" style={input} />
+        <input type="datetime-local" value={f.starts_at} onChange={set("starts_at")} data-testid="ev-date" className="input" />
       </label>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 12 }}>
+      <div className="field-grid">
         {field("จำนวนแถว", "rows")}
         {field("ที่นั่งต่อแถว", "seats_per_row")}
         {field("ที่นั่ง/คน", "max_seats_per_order")}
@@ -725,13 +548,11 @@ function CreateEventForm({ authFetch, busy, setBusy, onCreated, setMsg }) {
         {field("แถวพรีเมียม", "premium_rows")}
         {field("ราคาพรีเมียม (฿)", "premium_price")}
       </div>
-      <div style={{ display: "flex", gap: 10 }}>
-        <button type="submit" disabled={busy} data-testid="ev-submit" style={btn(true)}>
+      <div className="form-actions">
+        <button type="submit" disabled={busy} data-testid="ev-submit" className="btn btn--primary">
           {busy ? "กำลังสร้าง…" : "สร้างงาน"}
         </button>
-        <button type="button" onClick={() => setOpen(false)} style={btn(false)}>
-          ยกเลิก
-        </button>
+        <button type="button" onClick={() => setOpen(false)} className="btn btn--ghost">ยกเลิก</button>
       </div>
     </form>
   );
@@ -782,49 +603,33 @@ function AuthForm({ onAuthed }) {
   };
 
   return (
-    <main style={{ maxWidth: 380, margin: "80px auto", padding: "0 20px" }}>
-      <p style={{ letterSpacing: 4, fontSize: 11, color: "#8a877d", margin: 0 }}>FLASH SALE</p>
-      <h1 style={{ fontSize: 28, fontWeight: 500, margin: "6px 0 20px" }}>
-        {mode === "register" ? "สมัครสมาชิก" : "เข้าสู่ระบบ"}
-      </h1>
-      <form onSubmit={submit} style={{ display: "grid", gap: 12 }}>
-        <input
-          type="email"
-          placeholder="อีเมล"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          data-testid="auth-email"
-          autoComplete="email"
-          style={input}
-        />
-        <input
-          type="password"
-          placeholder="รหัสผ่าน (อย่างน้อย 8 ตัว)"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          data-testid="auth-password"
-          autoComplete={mode === "register" ? "new-password" : "current-password"}
-          style={input}
-        />
-        <button type="submit" disabled={busy} data-testid="auth-submit" style={btn(true)}>
-          {mode === "register" ? "สมัครและเข้าสู่ระบบ" : "เข้าสู่ระบบ"}
+    <main className="auth">
+      <div className="auth__card anim-rise">
+        <p className="eyebrow">Box Office · Live in Bangkok 2026</p>
+        <h1 className="title">{mode === "register" ? "สมัครสมาชิก" : "เข้าสู่ระบบ"}</h1>
+        <form onSubmit={submit}>
+          <input
+            type="email" placeholder="อีเมล" value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            data-testid="auth-email" autoComplete="email" className="input"
+          />
+          <input
+            type="password" placeholder="รหัสผ่าน (อย่างน้อย 8 ตัว)" value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            data-testid="auth-password" autoComplete={mode === "register" ? "new-password" : "current-password"} className="input"
+          />
+          <button type="submit" disabled={busy} data-testid="auth-submit" className="btn btn--primary">
+            {mode === "register" ? "สมัครและเข้าสู่ระบบ" : "เข้าสู่ระบบ"}
+          </button>
+        </form>
+        {err && <p data-testid="auth-error" className="auth__error">{err}</p>}
+        <button
+          onClick={() => { setMode(mode === "register" ? "login" : "register"); setErr(""); }}
+          data-testid="auth-toggle" className="auth__toggle"
+        >
+          {mode === "register" ? "มีบัญชีอยู่แล้ว? เข้าสู่ระบบ" : "ยังไม่มีบัญชี? สมัครสมาชิก"}
         </button>
-      </form>
-      {err && (
-        <p data-testid="auth-error" style={{ marginTop: 12, color: "#e08a4f", fontSize: 13 }}>
-          {err}
-        </p>
-      )}
-      <button
-        onClick={() => {
-          setMode(mode === "register" ? "login" : "register");
-          setErr("");
-        }}
-        data-testid="auth-toggle"
-        style={{ marginTop: 18, background: "none", border: "none", color: "#8fd9bd", cursor: "pointer", fontSize: 13 }}
-      >
-        {mode === "register" ? "มีบัญชีอยู่แล้ว? เข้าสู่ระบบ" : "ยังไม่มีบัญชี? สมัครสมาชิก"}
-      </button>
+      </div>
     </main>
   );
 }
@@ -839,10 +644,7 @@ async function solvePow(challenge, difficulty) {
     const bytes = new Uint8Array(buf);
     let bitsZero = 0;
     for (const x of bytes) {
-      if (x === 0) {
-        bitsZero += 8;
-        continue;
-      }
+      if (x === 0) { bitsZero += 8; continue; }
       bitsZero += Math.clz32(x) - 24; // leading zeros within this byte
       break;
     }
@@ -859,24 +661,3 @@ function errText(code, status) {
   };
   return map[code] || `ทำรายการไม่สำเร็จ (${code || status})`;
 }
-
-const input = {
-  padding: "12px 14px",
-  borderRadius: 10,
-  border: "1px solid #2c3540",
-  background: "#141a20",
-  color: "#e8e6df",
-  fontSize: 15,
-  outline: "none",
-};
-
-const btn = (primary) => ({
-  padding: "12px 22px",
-  borderRadius: 10,
-  border: primary ? "none" : "1px solid #3a444f",
-  background: primary ? "#2f8f6f" : "transparent",
-  color: primary ? "#0c1512" : "#c9c6bb",
-  fontSize: 15,
-  fontWeight: 500,
-  cursor: "pointer",
-});
