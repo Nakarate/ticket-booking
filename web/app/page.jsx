@@ -56,6 +56,7 @@ export default function Page() {
   const [adminView, setAdminView] = useState(false);
 
   const [seats, setSeats] = useState([]);
+  const [seatsLoaded, setSeatsLoaded] = useState(false);
   const [selected, setSelected] = useState([]);
   const [order, setOrder] = useState(null); // {id, expiresAt, idemKey}
   const [remaining, setRemaining] = useState(0);
@@ -130,6 +131,7 @@ export default function Page() {
       .then((r) => r.json())
       .then((d) => {
         setSeats(d.seats || []);
+        setSeatsLoaded(true);
         if (d.event?.name) setEventName(d.event.name);
         if (d.event?.max_seats_per_order) setMaxSeats(d.event.max_seats_per_order);
       })
@@ -156,6 +158,7 @@ export default function Page() {
   useEffect(() => {
     setSelected([]);
     setOrder(null);
+    setSeatsLoaded(false);
   }, [eventId]);
 
   // Hold countdown.
@@ -301,27 +304,41 @@ export default function Page() {
           <div className="stage anim-rise">STAGE</div>
 
           <div className="seatmap-wrap">
-            <div className={`seatmap${order ? " locked" : ""}`}>
-              {Object.entries(rows).map(([row, list]) => (
-                <div key={row} className="seat-row">
-                  <span className="seat-row__label">{row}</span>
-                  {list.map((s) => (
-                    <div
-                      key={s.id}
-                      className="seat"
-                      title={`${s.seat_no} · ฿${s.price}`}
-                      onClick={() => toggleSeat(s)}
-                      data-testid="seat"
-                      data-seat-no={s.seat_no}
-                      data-status={s.status}
-                      data-selected={selected.includes(s.id)}
-                    >
-                      {s.seat_no.match(/\d+$/)?.[0]}
-                    </div>
-                  ))}
-                </div>
-              ))}
-            </div>
+            {!seatsLoaded && seats.length === 0 ? (
+              <div className="seatmap seatmap--skel" aria-busy="true" aria-label="กำลังโหลดผังที่นั่ง">
+                {Array.from({ length: 8 }).map((_, r) => (
+                  <div key={r} className="seat-row">
+                    {Array.from({ length: 14 }).map((_, c) => (
+                      <span key={c} className="seat-skel" />
+                    ))}
+                  </div>
+                ))}
+              </div>
+            ) : seats.length === 0 ? (
+              <p className="empty-note">ยังไม่มีผังที่นั่งสำหรับงานนี้</p>
+            ) : (
+              <div className={`seatmap${order ? " locked" : ""}`}>
+                {Object.entries(rows).map(([row, list]) => (
+                  <div key={row} className="seat-row">
+                    <span className="seat-row__label">{row}</span>
+                    {list.map((s) => (
+                      <div
+                        key={s.id}
+                        className="seat"
+                        title={`${s.seat_no} · ฿${s.price}`}
+                        onClick={() => toggleSeat(s)}
+                        data-testid="seat"
+                        data-seat-no={s.seat_no}
+                        data-status={s.status}
+                        data-selected={selected.includes(s.id)}
+                      >
+                        {s.seat_no.match(/\d+$/)?.[0]}
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="legend">
@@ -387,13 +404,14 @@ export default function Page() {
 // per-order seat cap. All calls go through authFetch (admin-gated on the server).
 function AdminPanel({ authFetch, onChanged }) {
   const [events, setEvents] = useState([]);
+  const [loaded, setLoaded] = useState(false);
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(() => {
     authFetch(`${API}/api/admin/events`)
       .then((r) => (r.ok ? r.json() : { events: [] }))
-      .then((d) => setEvents(d.events || []))
+      .then((d) => { setEvents(d.events || []); setLoaded(true); })
       .catch(() => {});
   }, [authFetch]);
 
@@ -433,7 +451,13 @@ function AdminPanel({ authFetch, onChanged }) {
       {msg && <p className="msg">{msg}</p>}
 
       <div className="admin-list">
-        {events.map((e) => <EventRow key={e.id} e={e} onPatch={patch} />)}
+        {!loaded ? (
+          <p className="empty-note">กำลังโหลดข้อมูลงาน…</p>
+        ) : events.length === 0 ? (
+          <p className="empty-note">ยังไม่มีงาน — กด “สร้างงานใหม่” เพื่อเริ่ม</p>
+        ) : (
+          events.map((e) => <EventRow key={e.id} e={e} onPatch={patch} />)
+        )}
       </div>
     </div>
   );

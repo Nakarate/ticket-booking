@@ -149,6 +149,15 @@ h1, h2, h3 { font-family: var(--display); font-weight: 600; margin: 0; line-heig
 }
 
 .seatmap-wrap { overflow-x: auto; padding-bottom: 6px; -webkit-overflow-scrolling: touch; }
+
+/* loading skeleton + empty state */
+.seatmap--skel { opacity: 0.6; }
+.seat-skel { width: var(--seat); height: var(--seat); border-radius: 7px; background: var(--surface-3); display: inline-block; }
+@media (prefers-reduced-motion: no-preference) {
+  .seat-skel { animation: shimmer 1.3s ease-in-out infinite; }
+  @keyframes shimmer { 0%, 100% { opacity: 0.4; } 50% { opacity: 0.85; } }
+}
+.empty-note { text-align: center; color: var(--muted); padding: 38px 16px; font-size: 14px; }
 .seatmap { display: grid; gap: var(--seat-gap); justify-content: center; min-width: max-content; margin: 0 auto; }
 .seat-row { display: flex; gap: var(--seat-gap); align-items: center; }
 .seat-row__label { width: 16px; font-size: 11px; color: var(--faint); font-family: var(--display); }
