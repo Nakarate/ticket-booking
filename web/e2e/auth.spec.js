@@ -17,6 +17,7 @@ test.describe("authentication", () => {
 
     // Logout → back to the auth form (login mode by default).
     await page.getByTestId("logout-btn").click();
+    await page.getByTestId("confirm-ok").click(); // confirm dialog
     await expect(page.getByTestId("auth-submit")).toBeVisible();
     await expect(heading(page)).toHaveCount(0);
 
@@ -38,6 +39,7 @@ test.describe("authentication", () => {
     await page.getByTestId("auth-submit").click();
     await expect(heading(page)).toBeVisible();
     await page.getByTestId("logout-btn").click();
+    await page.getByTestId("confirm-ok").click(); // confirm dialog
 
     // Back in login mode — try the wrong password.
     await page.getByTestId("auth-email").fill(email);

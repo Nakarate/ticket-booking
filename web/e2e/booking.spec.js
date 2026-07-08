@@ -19,6 +19,55 @@ test.describe("seat map & auth", () => {
   });
 });
 
+test.describe("event listing", () => {
+  test("landing shows event cards; pick opens booking; back returns", async ({ page }) => {
+    await page.goto("/");
+    await page.getByTestId("auth-toggle").click(); // form defaults to login; switch to register
+    const email = `e2e-nav-${Date.now()}@test.dev`;
+    await page.getByTestId("auth-email").fill(email);
+    await page.getByTestId("auth-password").fill("e2e-password-123");
+    await page.getByTestId("auth-submit").click();
+
+    // Landing: at least one event card, no seat map yet.
+    await expect(page.getByTestId("event-card").first()).toBeVisible();
+    await expect(page.getByTestId("seat")).toHaveCount(0);
+
+    // A single-show production opens the seat map directly.
+    await page.getByTestId("event-card").filter({ hasText: "Live in Bangkok 2026" }).click();
+    await expect(page.getByTestId("seat").first()).toBeVisible();
+
+    // Back → landing again.
+    await page.getByTestId("back-to-events").click();
+    await expect(page.getByTestId("event-card").first()).toBeVisible();
+    await expect(page.getByTestId("seat")).toHaveCount(0);
+  });
+
+  test("multi-show production opens a date picker; pick a show to book", async ({ page }) => {
+    await page.goto("/");
+    await page.getByTestId("auth-toggle").click(); // form defaults to login; switch to register
+    await page.getByTestId("auth-email").fill(`e2e-prod-${Date.now()}@test.dev`);
+    await page.getByTestId("auth-password").fill("e2e-password-123");
+    await page.getByTestId("auth-submit").click();
+
+    // Landing → open the multi-show production (groups 3 shows into one card).
+    await page.getByTestId("event-card").filter({ hasText: "Bangkok EDM Festival 2026" }).click();
+
+    // Show picker lists the rounds; no seat map yet.
+    await expect(page.getByTestId("show-row")).toHaveCount(3);
+    await expect(page.getByTestId("seat")).toHaveCount(0);
+
+    // Pick a show → seat map.
+    await page.getByTestId("show-row").first().click();
+    await expect(page.getByTestId("seat").first()).toBeVisible();
+
+    // Back → show picker; back again → landing.
+    await page.getByTestId("back-to-events").click();
+    await expect(page.getByTestId("show-row")).toHaveCount(3);
+    await page.getByTestId("back-to-productions").click();
+    await expect(page.getByTestId("event-card").first()).toBeVisible();
+  });
+});
+
 test.describe("seat selection", () => {
   test("selecting a seat updates counter, total and enables booking", async ({ page }) => {
     await openApp(page);
@@ -29,7 +78,8 @@ test.describe("seat selection", () => {
     await seat.click();
 
     await expect(page.getByText("เลือกแล้ว 1/4 ที่นั่ง")).toBeVisible();
-    await expect(page.getByText(`฿${price.toLocaleString()}`)).toBeVisible();
+    // scope to the action-bar total (the price guide also contains ฿ prices)
+    await expect(page.locator(".actionbar__big")).toHaveText(`฿${price.toLocaleString()}`);
     await expect(bookButton(page)).toBeEnabled();
   });
 
@@ -66,6 +116,7 @@ test.describe("booking lifecycle", () => {
     await expect(cancelButton(page)).toBeVisible();
 
     await cancelButton(page).click();
+    await page.getByTestId("confirm-ok").click(); // confirm dialog
     await expect(page.getByText(/ยกเลิกแล้ว ที่นั่งถูกปล่อยคืน/)).toBeVisible();
     // Back to the selection state.
     await expect(page.getByText("เลือกแล้ว 0/4 ที่นั่ง")).toBeVisible();
@@ -79,6 +130,7 @@ test.describe("booking lifecycle", () => {
     await expect(payButton(page)).toBeVisible();
 
     await payButton(page).click();
+    await page.getByTestId("confirm-ok").click(); // confirm dialog
     await expect(page.getByText(/ชำระเงินสำเร็จ/)).toBeVisible();
 
     // "My bookings" now lists a PAID order containing the seat we bought.
@@ -90,5 +142,19 @@ test.describe("booking lifecycle", () => {
     await expect(
       page.locator(`[data-testid="seat"][data-seat-no="${picked[0]}"]`)
     ).toHaveAttribute("data-status", "SOLD");
+  });
+
+  test("dismissing the confirm dialog does not pay", async ({ page }) => {
+    await openApp(page);
+    await selectAvailableSeats(page, 1);
+    await bookButton(page).click();
+    await expect(payButton(page)).toBeVisible();
+
+    await payButton(page).click();
+    await page.getByTestId("confirm-cancel").click(); // dismiss, don't pay
+
+    await expect(page.getByTestId("confirm-ok")).toHaveCount(0); // dialog closed
+    await expect(page.getByText(/ชำระเงินสำเร็จ/)).toHaveCount(0); // nothing paid
+    await expect(payButton(page)).toBeVisible(); // still holding, can still pay
   });
 });

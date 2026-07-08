@@ -1,0 +1,244 @@
+<style>
+  :root {
+    --bg: #f6f5f0; --card: #ffffff; --ink: #1a201e; --muted: #5c6a63;
+    --line: #e3e1d8; --green: #1f8f6f; --green-soft: #e6f2ec; --gold: #a9781f;
+    --accent-bar: #2f8f6f;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0c0f0e; --card: #151b19; --ink: #ecebe4; --muted: #9fb0a7;
+      --line: #283532; --green: #4fd0a0; --green-soft: #14251f; --gold: #e0b45f;
+      --accent-bar: #2f8f6f;
+    }
+  }
+  :root[data-theme="light"] {
+    --bg: #f6f5f0; --card: #ffffff; --ink: #1a201e; --muted: #5c6a63;
+    --line: #e3e1d8; --green: #1f8f6f; --green-soft: #e6f2ec; --gold: #a9781f;
+  }
+  :root[data-theme="dark"] {
+    --bg: #0c0f0e; --card: #151b19; --ink: #ecebe4; --muted: #9fb0a7;
+    --line: #283532; --green: #4fd0a0; --green-soft: #14251f; --gold: #e0b45f;
+  }
+
+  * { box-sizing: border-box; -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: -apple-system, "Segoe UI", "Leelawadee UI", system-ui, "Noto Sans Thai", sans-serif;
+    line-height: 1.62; font-size: 17px;
+  }
+  .page { max-width: 680px; margin: 0 auto; padding: 0 18px 64px; }
+
+  header.top {
+    position: sticky; top: 0; z-index: 10;
+    background: color-mix(in srgb, var(--bg) 88%, transparent);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--line);
+    padding: 12px 18px; margin: 0 -18px 8px;
+    display: flex; align-items: center; gap: 10px;
+    font-weight: 600; font-size: 15px;
+  }
+  header.top .dot { color: var(--green); }
+  header.top small { color: var(--muted); font-weight: 400; margin-left: auto; font-size: 12.5px; }
+
+  h1 { font-size: 27px; line-height: 1.2; margin: 22px 0 6px; letter-spacing: -.01em; text-wrap: balance; }
+  .sub { color: var(--muted); margin: 0 0 8px; }
+
+  section { margin-top: 30px; }
+  .eyebrow {
+    font-size: 12px; letter-spacing: .16em; text-transform: uppercase;
+    color: var(--gold); font-weight: 700; margin: 0 0 6px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .eyebrow .n {
+    background: var(--green-soft); color: var(--green); border-radius: 6px;
+    width: 22px; height: 22px; display: grid; place-items: center;
+    font-size: 12px; letter-spacing: 0;
+  }
+  h2 { font-size: 21px; line-height: 1.25; margin: 2px 0 12px; letter-spacing: -.01em; text-wrap: balance; }
+
+  p { margin: 0 0 12px; }
+  .lead { font-size: 18.5px; }
+  b, strong { font-weight: 700; }
+  .g { color: var(--green); font-weight: 700; }
+
+  ul { margin: 0 0 12px; padding: 0; list-style: none; display: grid; gap: 10px; }
+  ul li { position: relative; padding-left: 24px; }
+  ul li::before { content: ""; position: absolute; left: 2px; top: .62em; width: 8px; height: 8px; border-radius: 2px; background: var(--accent-bar); }
+  ul.check li::before { content: "✓"; color: var(--green); background: none; left: 0; top: 0; font-weight: 700; }
+
+  .card {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 14px; padding: 16px 18px; margin: 12px 0;
+  }
+  .card .t { font-weight: 700; margin-bottom: 4px; }
+  .card .t.g { color: var(--green); }
+  .card .t.r { color: var(--gold); }
+  .card p { margin: 0; color: var(--muted); font-size: 15.5px; }
+
+  .quote { border-left: 3px solid var(--green); padding: 4px 0 4px 14px; color: var(--muted); font-style: italic; margin: 12px 0; }
+  .quote b { color: var(--ink); font-style: normal; }
+
+  .stat { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; align-items: baseline; margin: 12px 0; }
+  .stat .n { font-weight: 800; color: var(--green); font-size: 20px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .stat .d { color: var(--muted); font-size: 15px; }
+
+  details {
+    border: 1px solid var(--line); border-radius: 12px; padding: 0 16px;
+    margin: 10px 0; background: var(--card);
+  }
+  details[open] { padding-bottom: 8px; }
+  summary {
+    cursor: pointer; padding: 14px 0; font-weight: 650; list-style: none;
+    display: flex; align-items: center; gap: 10px;
+  }
+  summary::-webkit-details-marker { display: none; }
+  summary::before { content: "＋"; color: var(--green); font-weight: 700; width: 16px; }
+  details[open] summary::before { content: "－"; }
+  details p { color: var(--muted); font-size: 15.5px; margin: 0 0 10px; }
+
+  .demo { counter-reset: step; display: grid; gap: 10px; }
+  .demo .row { display: flex; gap: 12px; align-items: flex-start; }
+  .demo .row .num {
+    counter-increment: step; background: var(--green); color: #fff;
+    min-width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center;
+    font-size: 13px; font-weight: 700; margin-top: 1px;
+  }
+  @media (prefers-color-scheme: dark) { .demo .row .num { color: #08110d; } }
+  .demo .row .txt b { display: block; }
+  .demo .row .txt code {
+    display: inline-block; margin-top: 3px; font-size: 13px;
+    background: var(--green-soft); color: var(--green);
+    padding: 3px 8px; border-radius: 6px; word-break: break-all;
+    font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  }
+
+  footer { margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13.5px; }
+
+  .toggle {
+    position: fixed; right: 14px; bottom: 14px; z-index: 20;
+    background: var(--card); border: 1px solid var(--line); color: var(--ink);
+    width: 44px; height: 44px; border-radius: 50%; font-size: 18px; cursor: pointer;
+    box-shadow: 0 4px 14px rgba(0,0,0,.15);
+  }
+  .toggle:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+</style>
+
+<div class="page">
+  <header class="top">
+    <span class="dot">🎟</span> ซ้อมพรีเซนต์ · ระบบจองตั๋ว
+    <small>เลื่อนอ่าน · แตะ ＋ ขยาย</small>
+  </header>
+
+  <h1>ระบบจองตั๋ว flash-sale ที่ <span class="g">ขายไม่ซ้ำ</span></h1>
+  <p class="sub">บทซ้อมรวมทุกหัวข้อ — อ่านบนมือถือได้ เอาไว้ทวนก่อนพูด</p>
+
+  <p class="lead">พิตช์ 1 ประโยค: <b>“ระบบจองที่นั่งที่การันตีไม่ขายซ้ำ แม้คนหลักพันกดพร้อมกัน — ปกป้องรายได้และชื่อเสียงแบรนด์”</b></p>
+
+  <section>
+    <p class="eyebrow"><span class="n">1</span> โจทย์</p>
+    <h2>ตอนเปิดขายบัตร คนแห่พร้อมกัน อะไรจะพังได้</h2>
+    <div class="card"><div class="t r">ขายที่นั่งซ้ำ</div><p>2 คนได้ที่เดียวกัน → ทะเลาะหน้างาน คืนเงิน โดนด่าลงโซเชียล</p></div>
+    <div class="card"><div class="t r">ระบบล่มตอนพีค</div><p>กดพร้อมกันจนค้าง → ขายไม่ได้เลย เสียยอดทั้งรอบ</p></div>
+    <div class="card"><div class="t r">บอทกวาดตั๋ว</div><p>ตั๋วหมดใน 3 วิ ไปโผล่ตลาดขายต่อ แฟนตัวจริงอด</p></div>
+    <p class="quote">ทุกข้อคือ <b>เรื่องเงินและความเชื่อมั่น</b> ไม่ใช่แค่เรื่องเทคนิค</p>
+  </section>
+
+  <section>
+    <p class="eyebrow"><span class="n">2</span> หัวใจ</p>
+    <h2>ที่นั่งเดียว = <span class="g">ขายได้ครั้งเดียว</span> เสมอ</h2>
+    <p>ถึงมีพันคนกดที่นั่งเดียวกันในเสี้ยววินาที ระบบขายได้ใบเดียวเป๊ะ คนอื่นเห็นทันทีว่าเต็ม</p>
+    <ul class="check">
+      <li><b>กันพลาด 2 ชั้นอิสระ</b> — ชั้นหนึ่งมีปัญหา อีกชั้นยังกันได้</li>
+      <li><b>เลือกฝั่งปลอดภัย</b> — ถ้าระบบมีปัญหาจะกลายเป็น “จองไม่ได้ชั่วคราว” ไม่ใช่ “ขายซ้ำ”</li>
+    </ul>
+    <p style="color:var(--muted);font-size:14.5px">(ศัพท์เทคนิค: Redis กันแรงกระแทก + Postgres unique index เป็นความจริง)</p>
+  </section>
+
+  <section>
+    <p class="eyebrow"><span class="n">3</span> ถ้าระบบล่มหน้างาน</p>
+    <h2>เราออกแบบให้ <span class="g">“ล่มแบบปลอดภัย”</span></h2>
+    <p>กรณีแย่สุดคือ <b>ลูกค้ารอ ไม่ใช่ที่นั่งซ้ำ</b> — เลยหยุดแล้วเปิดใหม่ได้อย่างสบายใจ</p>
+    <div class="card"><div class="t g">จะเกิดอะไร</div><p>คนที่จองไปแล้วที่นั่งไม่หลุด · หยุดขายชั่วคราวข้อมูลไม่เพี้ยน · กลับมาขายต่อได้เสมอ</p></div>
+    <div class="card"><div class="t">หน้างานทำ 3 สเต็ป</div><p>1) รู้ก่อน (ระบบเตือน) · 2) บอกลูกค้า (“ที่นั่งคุณปลอดภัย”) · 3) แก้หรือเลื่อน</p></div>
+  </section>
+
+  <section>
+    <p class="eyebrow"><span class="n">4</span> กันบอท</p>
+    <h2>ทำให้บอทกวาดตั๋ว <span class="g">ไม่คุ้มและไม่ทัน</span></h2>
+    <p><b>เกมทอยเต๋าก่อนสมัคร:</b> ก่อนสมัครได้ เครื่องต้อง “ทอยลูกเต๋าจนออก 6-6-6”</p>
+    <ul>
+      <li>คนซื้อจริง สมัครครั้งเดียว → ทอยแป๊บเดียว ไม่รู้สึกอะไร</li>
+      <li>บอทอยากได้แสนบัญชี → ต้องทอยเป็นแสนรอบ = เสียเวลาเป็นวัน ไม่คุ้ม</li>
+      <li>ฝั่งเราแค่ดูว่า “ออก 6-6-6 จริงมั้ย” → เห็นปุ๊บรู้ปั๊บ</li>
+    </ul>
+    <p>อีก 2 ชั้นเสริม: <b>ยามห้ามกดรัว</b> (จาก IP เดียว) + <b>1 คนถือได้จำกัด</b> (กันกวาดด้วยบัญชีเดียว)</p>
+    <div class="quote"><b>สรุป:</b> บอทต้องทั้งช้าทั้งเปลืองเงิน — บัตรหมดก่อนทำเสร็จ</div>
+  </section>
+
+  <section>
+    <p class="eyebrow"><span class="n">5</span> ตัวเลขพิสูจน์</p>
+    <h2>ไม่ได้พูดลอย ๆ — <span class="g">วัดมา</span></h2>
+    <div class="stat"><span class="n">1 / 999</span><span class="d">จำลอง 1,000 คนแย่งที่นั่งเดียว → ขายได้ 1 ใบ, ที่เหลือชน — oversell 0</span></div>
+    <div class="stat"><span class="n">26×</span><span class="d">หน้าเว็บดึงที่นั่งเร็วขึ้น 26 เท่า แม้ event ล้านที่นั่ง</span></div>
+    <div class="stat"><span class="n">18 + 8</span><span class="d">ชุดทดสอบอัตโนมัติ (ฝั่ง server + คลิกจริงบนเว็บ) เขียวหมด</span></div>
+    <div class="stat"><span class="n">13 ท่า</span><span class="d">ลองแฮ็กระบบตัวเอง แล้วปิดทุกช่องที่เจอ</span></div>
+  </section>
+
+  <section>
+    <p class="eyebrow"><span class="n">6</span> Trade-offs (ตอบตรง ๆ)</p>
+    <h2>รู้ว่ามีทางลัด — เลือกทำเองเพราะเป็น demo</h2>
+    <ul class="check">
+      <li><b>ทำเอง $0</b> รันโชว์ได้ทั้งระบบในเครื่องเดียว (offline)</li>
+      <li><b>ขึ้นจริง</b> ค่อยต่อระบบจ่ายเงินจริง + ล็อกอิน/กันบอทระดับองค์กร + เตรียมกำลังเครื่องช่วงพีค</li>
+      <li><b>ยังไม่รวม (ตั้งใจ):</b> เก็บเงินจริง · e-ticket/เช็คอิน · คืนเงิน — เป็น roadmap</li>
+    </ul>
+  </section>
+
+  <section>
+    <p class="eyebrow"><span class="n">7</span> Q&A ที่เจอบ่อย</p>
+    <h2>แตะเพื่อดูคำตอบ</h2>
+    <details><summary>bcrypt กับ “เกมทอยเต๋า” ต่างกันยังไง?</summary>
+      <p><b>bcrypt = เราเป็นคนทำ</b> ไว้ล็อกรหัสผ่านไม่ให้หลุด · <b>เกมทอยเต๋า (Proof-of-Work) = บอทเป็นคนทำ</b> ไว้กันสแปม — เกือบตรงข้ามกันเรื่องใครแบกต้นทุน</p></details>
+    <details><summary>บอทฝ่าได้ไหม?</summary>
+      <p>ถ้าทุนหนา (เครื่องแรง) ก็ฝ่าได้ แต่แพงขึ้นมากและช้าลง จนบัตรหมดก่อน — โปรดักชันเสริม CAPTCHA อีกชั้น มันคือ “ทำให้ไม่คุ้ม” ไม่ใช่ “ปิดตาย”</p></details>
+    <details><summary>กระทบลูกค้าจริงไหม?</summary>
+      <p>คนปกติแทบไม่รู้สึก (เสี้ยววินาที) มือถือเก่าอาจช้าขึ้นนิด — เราตั้งความยากพอดี หรือเปิดเฉพาะตอนโดนโจมตี</p></details>
+    <details><summary>ทำไมมั่นใจว่าไม่ขายซ้ำ?</summary>
+      <p>มีด่านกัน 2 ชั้นอิสระ + พิสูจน์ด้วยการจำลอง 1,000 คนแย่งที่เดียว (ได้ 1 ใบ) และชุดทดสอบอัตโนมัติทุกครั้งที่แก้โค้ด</p></details>
+    <details><summary>Redis/ระบบส่วนหนึ่งล่ม เป็นยังไง?</summary>
+      <p>จองใหม่ไม่ได้ชั่วคราว แต่ที่นั่งที่จองไปแล้วปลอดภัย และ<b>ไม่มีวันขายซ้ำ</b> — หยุดแล้วเปิดใหม่ได้</p></details>
+  </section>
+
+  <section>
+    <p class="eyebrow"><span class="n">8</span> สคริปต์ demo สด</p>
+    <h2>กดโชว์ทีละอย่าง</h2>
+    <div class="demo">
+      <div class="row"><div class="num"></div><div class="txt"><b>Race → oversell 0</b><code>k6 run k6/race.js → 1/999</code></div></div>
+      <div class="row"><div class="num"></div><div class="txt"><b>ความเร็ว index</b><code>psql -f db/demo_explain.sql</code></div></div>
+      <div class="row"><div class="num"></div><div class="txt"><b>ดับ Redis (ล่มปลอดภัย)</b><code>docker compose stop redis</code></div></div>
+      <div class="row"><div class="num"></div><div class="txt"><b>Proof-of-work</b><code>POW_DIFFICULTY=18 up</code></div></div>
+      <div class="row"><div class="num"></div><div class="txt"><b>Rate limit 429</b><code>AUTH_RATE_BURST=5 up</code></div></div>
+    </div>
+    <p class="quote" style="margin-top:14px">ก่อน demo ทุกครั้ง: <b>docker compose down -v && up --build</b> (reset ที่นั่ง)</p>
+  </section>
+
+  <footer>
+    ปิดท้าย 3 คำ: <b class="g">ไม่ขายซ้ำ · รับพีคได้ · ตั๋วถึงมือคนจริง</b><br>
+    เอกสารเต็มในโปรเจกต์: CLAUDE.md · docs/benchmark-results · security-review · anti-bot-explained · techniques-used
+  </footer>
+</div>
+
+<button class="toggle" id="themeBtn" aria-label="สลับโหมดสว่าง/มืด">◐</button>
+<script>
+  (function () {
+    var btn = document.getElementById("themeBtn");
+    btn.addEventListener("click", function () {
+      var root = document.documentElement;
+      var cur = root.getAttribute("data-theme");
+      if (!cur) {
+        cur = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      }
+      root.setAttribute("data-theme", cur === "dark" ? "light" : "dark");
+    });
+  })();
+</script>

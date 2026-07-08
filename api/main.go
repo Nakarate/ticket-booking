@@ -136,11 +136,23 @@ func main() {
 	mux.HandleFunc("POST /api/admin/events", a.adminAuth(a.createAdminEvent))
 	mux.HandleFunc("PATCH /api/admin/events/{id}", a.adminAuth(a.patchAdminEvent))
 
-	// Background worker: expire unpaid orders so seats free up in the DB.
-	// (Redis holds free themselves via TTL.)
-	if err := a.ensureAdmin(ctx); err != nil {
-		log.Println("admin bootstrap:", err)
-	}
+	// Bootstrap the admin in the background with retry: on a fresh boot Postgres
+	// may still be running init scripts (the demo seeds 1M rows), so a single
+	// attempt can hit "connection refused" and silently leave no admin. Retrying
+	// until it lands means `docker compose down -v && up` reliably has an admin.
+	go func() {
+		for attempt := 1; attempt <= 30; attempt++ {
+			if err := a.ensureAdmin(ctx); err == nil {
+				if attempt > 1 {
+					log.Printf("admin bootstrap: ok after %d attempts", attempt)
+				}
+				return
+			} else if attempt == 30 {
+				log.Println("admin bootstrap: giving up after retries:", err)
+			}
+			time.Sleep(2 * time.Second)
+		}
+	}()
 
 	workerCtx, stopWorker := context.WithCancel(ctx)
 	go a.expiryWorker(workerCtx)

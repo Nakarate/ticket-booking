@@ -136,6 +136,74 @@ h1, h2, h3 { font-family: var(--display); font-weight: 600; margin: 0; line-heig
 .picker__label { font-size: 12.5px; color: var(--muted); white-space: nowrap; }
 .picker .select { max-width: 380px; }
 
+/* ---------------- event listing (landing) ---------------- */
+.event-grid {
+  margin-top: 26px;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(258px, 1fr)); gap: 16px;
+}
+.ev-card {
+  text-align: left; padding: 0; margin: 0; cursor: pointer;
+  border: 1px solid var(--line); border-radius: var(--radius);
+  background: var(--surface); color: var(--ink); font-family: var(--body);
+  overflow: hidden; display: flex; flex-direction: column;
+  transition: transform .18s cubic-bezier(.2, .7, .3, 1), box-shadow .18s ease, border-color .18s ease;
+}
+.ev-card:hover { transform: translateY(-4px); border-color: var(--green); box-shadow: 0 20px 44px -24px var(--green-glow); }
+.ev-card:focus-visible { outline: 2px solid var(--green-bright); outline-offset: 2px; }
+.ev-card__media {
+  height: 96px; position: relative; display: flex; align-items: flex-start; justify-content: flex-end;
+  padding: 12px; border-bottom: 1px solid var(--line);
+  background:
+    radial-gradient(120% 150% at 18% -30%, rgba(70, 199, 147, 0.42), transparent 58%),
+    radial-gradient(90% 120% at 100% 130%, rgba(215, 164, 74, 0.16), transparent 60%),
+    linear-gradient(135deg, var(--surface-3), var(--surface-2));
+}
+.ev-card__media::before {
+  /* faint seat-row texture */
+  content: ""; position: absolute; inset: 0; opacity: .5;
+  background-image: radial-gradient(rgba(255, 255, 255, .05) 1px, transparent 1.4px);
+  background-size: 13px 13px;
+}
+.ev-card__badge {
+  position: relative; font-size: 11px; font-weight: 600; padding: 4px 11px; border-radius: 999px;
+  background: #123528; color: #6fe0aa;
+}
+.ev-card__badge--out { background: #2a2331; color: #c3a0d6; }
+.ev-card__body { padding: 15px 18px 18px; display: grid; gap: 5px; }
+.ev-card__name { font-family: var(--display); font-size: 18px; font-weight: 600; margin: 0; letter-spacing: -0.01em; }
+.ev-card__date { font-size: 12.5px; color: var(--muted); }
+.ev-card__meta { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12.5px; color: var(--ink-2); margin-top: 5px; }
+.ev-card__venue { font-size: 12px; color: var(--muted); }
+.ev-card__cta { margin-top: 12px; color: var(--green-bright); font-weight: 600; font-size: 13.5px; }
+.ev-card:hover .ev-card__cta { text-decoration: underline; }
+.ev-card__rounds {
+  position: relative; font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 999px;
+  background: rgba(215, 164, 74, 0.16); color: var(--gold-soft);
+}
+
+.back-btn { margin-top: 22px; padding-left: 14px; padding-right: 18px; }
+
+/* ---------------- show / date picker ---------------- */
+.showpicker__venue { color: var(--muted); font-size: 13.5px; margin: 16px 0 0; }
+.show-list { display: grid; gap: 10px; margin-top: 12px; }
+.show-row {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  padding: 16px 18px; border-radius: var(--radius); cursor: pointer;
+  background: var(--surface); border: 1px solid var(--line); color: var(--ink);
+  font-family: var(--body); text-align: left;
+  transition: transform .16s cubic-bezier(.2, .7, .3, 1), border-color .16s ease, box-shadow .16s ease;
+}
+.show-row:hover:not(:disabled) { transform: translateX(3px); border-color: var(--green); box-shadow: 0 12px 30px -20px var(--green-glow); }
+.show-row:focus-visible { outline: 2px solid var(--green-bright); outline-offset: 2px; }
+.show-row:disabled { opacity: 0.55; cursor: not-allowed; }
+.show-row__main { flex: 1; min-width: 160px; }
+.show-row__name { font-family: var(--display); font-size: 16px; font-weight: 600; }
+.show-row__date { font-size: 13px; color: var(--muted); margin-top: 2px; }
+.show-row__meta { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; font-size: 12.5px; color: var(--ink-2); }
+.show-row__meta .show-row__out { color: var(--muted); }
+.show-row__price { color: var(--gold-soft); }
+.show-row__cta { color: var(--green-bright); font-weight: 600; font-size: 13.5px; white-space: nowrap; }
+
 /* ---------------- stage + seat map ---------------- */
 .stage {
   margin: clamp(26px, 5vw, 40px) auto clamp(20px, 4vw, 30px);
@@ -148,7 +216,24 @@ h1, h2, h3 { font-family: var(--display); font-weight: 600; margin: 0; line-heig
   box-shadow: 0 24px 60px -30px var(--green-glow);
 }
 
-.seatmap-wrap { overflow-x: auto; padding-bottom: 6px; -webkit-overflow-scrolling: touch; }
+/* padding gives the hover/pop transforms room — overflow-x:auto also clips the
+   Y axis, so without top padding the lifted top row gets cut off. */
+/* price tiers — makes it obvious which rows are premium */
+.price-guide {
+  display: flex; gap: 8px 20px; flex-wrap: wrap; justify-content: center;
+  margin: 2px 0 4px; font-size: 12.5px; color: var(--ink-2);
+}
+.price-guide .tier { display: inline-flex; align-items: center; gap: 7px; }
+.price-guide .tier i { width: 11px; height: 11px; border-radius: 3px; background: var(--sold-bd); }
+.price-guide .tier--premium { color: var(--gold-soft); font-weight: 600; }
+.price-guide .tier--premium i {
+  background: linear-gradient(180deg, var(--gold-soft), var(--gold));
+  box-shadow: 0 0 0 2px rgba(215, 164, 74, 0.18);
+}
+/* gold row letter marks the premium rows on the map itself */
+.seat-row--premium .seat-row__label { color: var(--gold); font-weight: 700; }
+
+.seatmap-wrap { overflow-x: auto; padding: 14px 4px 10px; -webkit-overflow-scrolling: touch; }
 
 /* loading skeleton + empty state */
 .seatmap--skel { opacity: 0.6; }
@@ -242,10 +327,27 @@ h1, h2, h3 { font-family: var(--display); font-weight: 600; margin: 0; line-heig
 .cap-edit .input { width: 66px; padding: 8px; text-align: center; }
 .admin-list { margin-top: 22px; display: grid; gap: 12px; }
 
+/* production grouping in the admin dashboard */
+.admin-group { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface-2); overflow: hidden; }
+.admin-group__head {
+  display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 14px 18px; border-bottom: 1px solid var(--line);
+  background: linear-gradient(180deg, rgba(215, 164, 74, 0.07), transparent);
+}
+.admin-group__name { font-family: var(--display); font-size: 17px; font-weight: 600; }
+.admin-group__venue { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.admin-group__stats { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; font-size: 12.5px; color: var(--ink-2); }
+.admin-group__stats .rev { color: var(--green-bright); font-variant-numeric: tabular-nums; }
+.admin-group__stats .badge-rounds { padding: 3px 10px; border-radius: 999px; background: rgba(215, 164, 74, 0.16); color: var(--gold-soft); font-weight: 600; }
+.admin-group__add { padding: 6px 12px; min-height: 34px; font-size: 13px; }
+.admin-group__rounds { padding: 12px; display: grid; gap: 10px; }
+.admin-group__rounds .event-card { background: var(--surface); }
+
 /* create-event form */
 .create-form { margin-top: 18px; padding: 22px; border-radius: var(--radius); background: var(--surface); border: 1px solid var(--line); display: grid; gap: 15px; }
 .create-form h3 { font-size: 16px; font-weight: 500; }
 .field { display: grid; gap: 5px; font-size: 12px; color: var(--muted); }
+.field__hint { color: var(--faint); font-weight: 400; }
 .field-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: 12px; }
 .form-actions { display: flex; gap: 10px; flex-wrap: wrap; }
 
@@ -289,3 +391,82 @@ h1, h2, h3 { font-family: var(--display); font-weight: 600; margin: 0; line-heig
   }
   .stat__value { font-size: 22px; }
 }
+
+/* ============================================================
+   Enhanced interaction & motion — tactile seats, a living stage,
+   and a button sheen. Purely presentational: no testids/attributes
+   or layout change, so the e2e suite is unaffected.
+   ============================================================ */
+.seat {
+  transition: transform .16s cubic-bezier(.34, 1.56, .64, 1),
+              box-shadow .16s ease, background .12s ease, filter .12s ease;
+}
+.seat[data-status="AVAILABLE"]:hover { filter: brightness(1.12); }
+.seat[data-status="AVAILABLE"]:active { transform: scale(.9); transition-duration: .05s; }
+
+.btn--primary { position: relative; overflow: hidden; }
+.btn--primary::after {
+  content: ""; position: absolute; top: 0; left: -130%;
+  width: 55%; height: 100%; pointer-events: none;
+  background: linear-gradient(105deg, transparent, rgba(255, 255, 255, .30), transparent);
+  transform: skewX(-18deg); transition: left .6s ease;
+}
+.btn--primary:hover::after { left: 140%; }
+
+@media (prefers-reduced-motion: no-preference) {
+  /* a satisfying pop when a seat is picked, then a gentle living glow */
+  .seat[data-selected="true"] {
+    animation: seatPop .3s cubic-bezier(.34, 1.56, .64, 1),
+               selGlow 2.6s ease-in-out .3s infinite;
+  }
+  @keyframes seatPop {
+    0%   { transform: scale(.85); }
+    55%  { transform: translateY(-3px) scale(1.15); }
+    100% { transform: translateY(-1px) scale(1); }
+  }
+  @keyframes selGlow {
+    0%, 100% { box-shadow: 0 6px 16px -4px var(--green-glow); }
+    50%      { box-shadow: 0 9px 24px -3px var(--green-glow); }
+  }
+  /* ambient theatre spotlight breathing under the stage */
+  .stage { animation: stageGlow 5s ease-in-out infinite; }
+  @keyframes stageGlow {
+    0%, 100% { box-shadow: 0 24px 60px -30px var(--green-glow); }
+    50%      { box-shadow: 0 30px 78px -24px var(--green-glow); }
+  }
+  /* toast + booking rows ease in instead of snapping in */
+  .msg { animation: slideIn .35s cubic-bezier(.2, .7, .3, 1) both; }
+  @keyframes slideIn { from { opacity: 0; transform: translateY(-7px); } to { opacity: 1; transform: none; } }
+  .order { animation: rise .42s cubic-bezier(.2, .7, .3, 1) both; }
+  .order:nth-child(2) { animation-delay: .05s; }
+  .order:nth-child(3) { animation-delay: .10s; }
+  .order:nth-child(4) { animation-delay: .15s; }
+  .order:nth-child(5) { animation-delay: .20s; }
+}
+
+/* ---------------- confirm dialog ---------------- */
+.btn--danger {
+  background: linear-gradient(180deg, #e0714f, #c8543a); color: #fff;
+  box-shadow: 0 6px 18px -8px rgba(224, 113, 79, .5);
+}
+.btn--danger:hover { filter: brightness(1.06); box-shadow: 0 10px 26px -8px rgba(224, 113, 79, .5); }
+
+.modal-backdrop {
+  position: fixed; inset: 0; z-index: 50;
+  background: rgba(6, 9, 8, .66); backdrop-filter: blur(3px);
+  display: grid; place-items: center; padding: 20px;
+  animation: fadeIn .18s ease both;
+}
+.modal {
+  width: min(420px, 100%);
+  background: linear-gradient(180deg, var(--surface-2), var(--surface));
+  border: 1px solid var(--line); border-radius: 18px;
+  padding: 26px 26px 22px; box-shadow: var(--shadow);
+  animation: modalPop .24s cubic-bezier(.34, 1.4, .5, 1) both;
+}
+.modal__title { font-family: var(--display); font-size: 20px; margin: 0 0 8px; }
+.modal__msg { color: var(--ink-2); font-size: 14.5px; line-height: 1.55; margin: 0 0 22px; }
+.modal__actions { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes modalPop { from { opacity: 0; transform: translateY(10px) scale(.96); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .modal-backdrop, .modal { animation: none; } }

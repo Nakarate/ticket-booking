@@ -13,6 +13,9 @@ async function openApp(page) {
   await page.getByTestId("auth-email").fill(email);
   await page.getByTestId("auth-password").fill("e2e-password-123");
   await page.getByTestId("auth-submit").click();
+  // Landing shows a card per production — "Live in Bangkok 2026" is a single show,
+  // so its card opens the seat map directly.
+  await page.getByTestId("event-card").filter({ hasText: "Live in Bangkok 2026" }).click();
   await expect(page.getByRole("heading", { name: "Live in Bangkok 2026" })).toBeVisible();
   // Seat map is populated from GET /api/events/:id/seats (polled every 2s).
   await expect(page.getByTestId("seat").first()).toBeVisible();

@@ -128,10 +128,16 @@ func holdKey(eventID, seatID string) string {
 // listEvents returns the on-sale events for the customer picker (public).
 func (a *app) listEvents(w http.ResponseWriter, r *http.Request) {
 	rows, err := a.db.Query(r.Context(), `
-		SELECT id, name, starts_at, sale_opens_at, max_seats_per_order
-		FROM events
-		WHERE status = 'ON_SALE' AND NOT internal
-		ORDER BY created_at`)
+		SELECT e.id, e.name, e.starts_at, e.sale_opens_at, e.max_seats_per_order,
+		       e.series_id, e.series_name, e.venue,
+		       count(s.id) FILTER (WHERE s.status = 'AVAILABLE') AS available,
+		       count(s.id) AS total,
+		       COALESCE(min(s.price), 0) AS price_from
+		FROM events e
+		LEFT JOIN seats s ON s.event_id = e.id
+		WHERE e.status = 'ON_SALE' AND NOT e.internal
+		GROUP BY e.id
+		ORDER BY e.series_id NULLS FIRST, e.starts_at`)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, "db_error")
 		return
@@ -144,11 +150,19 @@ func (a *app) listEvents(w http.ResponseWriter, r *http.Request) {
 		StartsAt         time.Time `json:"starts_at"`
 		SaleOpensAt      time.Time `json:"sale_opens_at"`
 		MaxSeatsPerOrder int       `json:"max_seats_per_order"`
+		SeriesID         *string   `json:"series_id"`
+		SeriesName       *string   `json:"series_name"`
+		Venue            *string   `json:"venue"`
+		Available        int       `json:"available"`
+		Total            int       `json:"total"`
+		PriceFrom        float64   `json:"price_from"`
 	}
 	events := []event{}
 	for rows.Next() {
 		var e event
-		if err := rows.Scan(&e.ID, &e.Name, &e.StartsAt, &e.SaleOpensAt, &e.MaxSeatsPerOrder); err != nil {
+		if err := rows.Scan(&e.ID, &e.Name, &e.StartsAt, &e.SaleOpensAt, &e.MaxSeatsPerOrder,
+			&e.SeriesID, &e.SeriesName, &e.Venue,
+			&e.Available, &e.Total, &e.PriceFrom); err != nil {
 			writeErr(w, http.StatusInternalServerError, "db_error")
 			return
 		}

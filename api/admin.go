@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"net/http"
+	"strings"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
@@ -53,6 +54,7 @@ func (a *app) adminAuth(next http.HandlerFunc) http.HandlerFunc {
 func (a *app) listAdminEvents(w http.ResponseWriter, r *http.Request) {
 	rows, err := a.db.Query(r.Context(), `
 		SELECT e.id, e.name, e.starts_at, e.sale_opens_at, e.status, e.max_seats_per_order,
+		       e.series_id, e.series_name, e.venue,
 		       count(s.id)                                        AS total,
 		       count(s.id) FILTER (WHERE s.status = 'SOLD')       AS sold,
 		       count(s.id) FILTER (WHERE s.status = 'AVAILABLE')  AS available,
@@ -61,7 +63,7 @@ func (a *app) listAdminEvents(w http.ResponseWriter, r *http.Request) {
 		LEFT JOIN seats s ON s.event_id = e.id
 		WHERE NOT e.internal
 		GROUP BY e.id
-		ORDER BY e.created_at DESC`)
+		ORDER BY e.series_id NULLS FIRST, e.starts_at`)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, "db_error")
 		return
@@ -75,6 +77,9 @@ func (a *app) listAdminEvents(w http.ResponseWriter, r *http.Request) {
 		SaleOpensAt      time.Time `json:"sale_opens_at"`
 		Status           string    `json:"status"`
 		MaxSeatsPerOrder int       `json:"max_seats_per_order"`
+		SeriesID         *string   `json:"series_id"`
+		SeriesName       *string   `json:"series_name"`
+		Venue            *string   `json:"venue"`
 		Total            int       `json:"total"`
 		Sold             int       `json:"sold"`
 		Available        int       `json:"available"`
@@ -84,7 +89,8 @@ func (a *app) listAdminEvents(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var e adminEvent
 		if err := rows.Scan(&e.ID, &e.Name, &e.StartsAt, &e.SaleOpensAt, &e.Status,
-			&e.MaxSeatsPerOrder, &e.Total, &e.Sold, &e.Available, &e.Revenue); err != nil {
+			&e.MaxSeatsPerOrder, &e.SeriesID, &e.SeriesName, &e.Venue,
+			&e.Total, &e.Sold, &e.Available, &e.Revenue); err != nil {
 			writeErr(w, http.StatusInternalServerError, "db_error")
 			return
 		}
@@ -108,6 +114,9 @@ func (a *app) createAdminEvent(w http.ResponseWriter, r *http.Request) {
 		PremiumRows      int     `json:"premium_rows"`   // optional
 		PremiumPrice     float64 `json:"premium_price"`  // optional
 		MaxSeatsPerOrder int     `json:"max_seats_per_order"`
+		SeriesID         string  `json:"series_id"`   // optional — join an existing production directly
+		SeriesName       string  `json:"series_name"` // optional — name for a NEW production
+		Venue            string  `json:"venue"`       // optional
 	}
 	if err := decodeJSON(w, r, &body); err != nil {
 		writeErr(w, http.StatusBadRequest, "bad_request")
@@ -174,11 +183,31 @@ func (a *app) createAdminEvent(w http.ResponseWriter, r *http.Request) {
 	}
 	defer tx.Rollback(r.Context())
 
+	// Grouping into a production: pick series_id to join an existing one exactly
+	// (no fragile name matching), or series_name to start a new one. Empty = standalone.
+	seriesID := strings.TrimSpace(body.SeriesID)
+	series := strings.TrimSpace(body.SeriesName)
+	venue := strings.TrimSpace(body.Venue)
+	if seriesID != "" && !isUUID(seriesID) {
+		writeErr(w, http.StatusBadRequest, "bad_series_id")
+		return
+	}
 	var eventID string
 	if err := tx.QueryRow(r.Context(), `
-		INSERT INTO events (name, starts_at, sale_opens_at, status, max_seats_per_order)
-		VALUES ($1, $2, $3, $4, $5) RETURNING id`,
-		body.Name, startsAt, saleOpensAt, status, maxPer).Scan(&eventID); err != nil {
+		INSERT INTO events (name, starts_at, sale_opens_at, status, max_seats_per_order,
+		                    series_id, series_name, venue)
+		VALUES ($1, $2, $3, $4, $5,
+		        CASE WHEN $6 <> '' THEN $6::uuid
+		             WHEN $7 <> '' THEN gen_random_uuid()
+		             ELSE NULL END,
+		        CASE WHEN $6 <> '' THEN (SELECT series_name FROM events WHERE series_id = $6::uuid LIMIT 1)
+		             WHEN $7 <> '' THEN $7
+		             ELSE NULL END,
+		        CASE WHEN $6 <> '' THEN (SELECT venue FROM events WHERE series_id = $6::uuid LIMIT 1)
+		             WHEN $7 <> '' THEN NULLIF($8, '')
+		             ELSE NULL END)
+		RETURNING id`,
+		body.Name, startsAt, saleOpensAt, status, maxPer, seriesID, series, venue).Scan(&eventID); err != nil {
 		writeErr(w, http.StatusInternalServerError, "db_error")
 		return
 	}

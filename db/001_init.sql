@@ -27,6 +27,11 @@ CREATE TABLE events (
     status              text NOT NULL DEFAULT 'ON_SALE',    -- ON_SALE | CLOSED
     max_seats_per_order int  NOT NULL DEFAULT 4,            -- per-order seat cap, set by admin
     internal            boolean NOT NULL DEFAULT false,     -- benchmark/fixture events, hidden from the app
+    -- Ticketmaster-style grouping: one production ("Live in Bangkok 2026") can
+    -- have many shows/rounds (one event row each, own seat map). NULL = standalone.
+    series_id           uuid,
+    series_name         text,
+    venue               text,
     created_at          timestamptz NOT NULL DEFAULT now()
 );
 
