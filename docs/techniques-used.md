@@ -96,6 +96,7 @@
 | เทคนิค | แก้ปัญหาอะไร | ไฟล์ |
 |---|---|---|
 | **Admin content management** | แอดมินสร้าง event/รอบการขายเอง, เปิด-ปิดการขาย, เลื่อนเวลา, ตั้งจำนวนที่นั่งต่อออเดอร์ — ไม่ต้อง hardcode | `api/admin.go` |
+| **Production grouping (Ticketmaster-style)** | งานหลัก 1 อัน = หลายรอบ (`events.series_id`) → ลูกค้าเห็นการ์ดเดียว → เลือกวัน/รอบ → จอง; แอดมิน join รอบเข้า production ด้วย series_id (ไม่ต้อง match ชื่อ) | `api/admin.go` · `web/app/page.jsx` |
 | **`adminAuth` (เช็ค `is_admin` จาก DB)** | สิทธิ์แอดมินอ่านจากฐานข้อมูล ไม่ใช่จาก token → ให้/ถอนสิทธิ์ได้ทันทีไม่ต้องรอ token หมดอายุ | `api/admin.go` |
 | **`ensureAdmin` (bootstrap)** | สร้างแอดมินตัวแรกจาก env `ADMIN_EMAIL/PASSWORD` ตอนบูต — demo มีแอดมินได้โดยไม่ต้อง seed มือ | `api/admin.go` |
 | **Per-order seat cap** (`max_seats_per_order`) | จำกัดจำนวนที่นั่งต่อ 1 ออเดอร์ ตั้งค่าได้ต่อ event | `api/admin.go` |

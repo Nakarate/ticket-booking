@@ -18,6 +18,19 @@ listed so they don't ship to production by accident.
 | 6 | Long-lived JWT (12h), no revocation | **Low** | **Fixed** ✅ |
 | 7 | No TLS (plaintext JWT in transit) | **Info** (dev) | Open (dev) |
 
+## Re-verification (2026-07-09) — after the Ticketmaster/admin work
+
+Re-ran the pentest suites on a clean seed after adding multi-show productions,
+the enriched `GET /api/events`, and admin production management. **No regression:**
+all previously-fixed defenses still hold (alg confusion, signature verification,
+IDOR → 404, price tampering, parameterized SQL, seat-count limits, cross-event →
+409, payment idempotency, oversell → 409), and the **new admin endpoints are
+correctly gated** — non-admin → `403 admin_only`, unauthenticated → `401`,
+`series_id` injection → `400 bad_series_id`, and SQL in a text field is
+parameterized (stored as literal data, DB intact). The still-open items are the
+same by-design ones (dev `JWT_SECRET`, permissive default rate limit, multi-account
+hoarding); nothing new.
+
 ## Fixes applied
 
 **Anti-automation (2026-07-07) — closes #4.** Rate limiting moved from an

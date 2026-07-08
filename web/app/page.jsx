@@ -725,6 +725,7 @@ function AdminPanel({ authFetch, askConfirm, onChanged }) {
 
       {creating ? (
         <CreateEventForm
+          key={presetSeries || "new"} /* remount so a new preset re-inits the dropdown */
           authFetch={authFetch}
           productions={grouped.filter((g) => g.seriesId)}
           presetSeriesId={presetSeries}
