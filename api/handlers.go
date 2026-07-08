@@ -352,10 +352,12 @@ func (a *app) listOrders(w http.ResponseWriter, r *http.Request) {
 	rows, err := a.db.Query(r.Context(), `
 		SELECT o.id, o.status, o.created_at,
 		       COALESCE(sum(oi.price), 0) AS amount,
-		       COALESCE(string_agg(s.seat_no, ', ' ORDER BY s.seat_no), '') AS seat_nos
+		       COALESCE(string_agg(s.seat_no, ', ' ORDER BY s.seat_no), '') AS seat_nos,
+		       max(e.name) AS event_name, max(e.series_name) AS series_name
 		FROM orders o
 		LEFT JOIN order_items oi ON oi.order_id = o.id
 		LEFT JOIN seats s ON s.id = oi.seat_id
+		LEFT JOIN events e ON e.id = s.event_id
 		WHERE o.user_id = $1
 		GROUP BY o.id
 		ORDER BY o.created_at DESC
@@ -367,16 +369,18 @@ func (a *app) listOrders(w http.ResponseWriter, r *http.Request) {
 	defer rows.Close()
 
 	type order struct {
-		ID        string    `json:"id"`
-		Status    string    `json:"status"`
-		CreatedAt time.Time `json:"created_at"`
-		Amount    float64   `json:"amount"`
-		SeatNos   string    `json:"seat_nos"`
+		ID         string    `json:"id"`
+		Status     string    `json:"status"`
+		CreatedAt  time.Time `json:"created_at"`
+		Amount     float64   `json:"amount"`
+		SeatNos    string    `json:"seat_nos"`
+		EventName  *string   `json:"event_name"`  // NULL for released orders (no seats left)
+		SeriesName *string   `json:"series_name"` // NULL when the event isn't part of a production
 	}
 	orders := []order{}
 	for rows.Next() {
 		var o order
-		if err := rows.Scan(&o.ID, &o.Status, &o.CreatedAt, &o.Amount, &o.SeatNos); err != nil {
+		if err := rows.Scan(&o.ID, &o.Status, &o.CreatedAt, &o.Amount, &o.SeatNos, &o.EventName, &o.SeriesName); err != nil {
 			writeErr(w, http.StatusInternalServerError, "db_error")
 			return
 		}

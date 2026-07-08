@@ -477,7 +477,14 @@ export default function Page() {
                     <span className={`pill ${o.status === "PAID" ? "pill--paid" : o.status === "PENDING" ? "pill--pending" : "pill--other"}`}>
                       {o.status}
                     </span>
-                    <span className="order__seats">{o.seat_nos || "—"}</span>
+                    <div className="order__body">
+                      {o.event_name && (
+                        <div className="order__event">
+                          {o.series_name ? `${o.series_name} · ${o.event_name}` : o.event_name}
+                        </div>
+                      )}
+                      <div className="order__seats">{o.seat_nos || "—"}</div>
+                    </div>
                     <span className="tnum">฿{Number(o.amount).toLocaleString()}</span>
                   </div>
                 ))}

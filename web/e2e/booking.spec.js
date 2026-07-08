@@ -133,9 +133,10 @@ test.describe("booking lifecycle", () => {
     await page.getByTestId("confirm-ok").click(); // confirm dialog
     await expect(page.getByText(/ชำระเงินสำเร็จ/)).toBeVisible();
 
-    // "My bookings" now lists a PAID order containing the seat we bought.
+    // "My bookings" now lists a PAID order with the event name + the seat we bought.
     const bookings = page.locator("section", { hasText: "การจองของฉัน" });
     await expect(bookings.getByText("PAID").first()).toBeVisible();
+    await expect(bookings.getByText("Live in Bangkok 2026").first()).toBeVisible();
     await expect(bookings.getByText(picked[0])).toBeVisible();
 
     // The seat is now SOLD in the map (no longer available).
