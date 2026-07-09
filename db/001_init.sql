@@ -116,10 +116,21 @@ CREATE INDEX idx_attempts_event ON booking_attempts(event_id, created_at DESC);
 --    changes and seats are insert-once, so its runtime write cost is ~nil.
 CREATE INDEX idx_seats_event ON seats(event_id);
 
--- ---------- VACUUM tuning for the UPDATE-heavy table ----------
--- Default autovacuum triggers at ~20% dead tuples: too slow for a
--- flash-sale table. fillfactor 85 leaves page space for HOT updates.
+-- ---------- MVCC / autovacuum tuning for the UPDATE-heavy table ----------
+-- Every paid seat is an UPDATE (AVAILABLE->SOLD) and each UPDATE leaves a dead
+-- tuple. Default autovacuum only fires at ~20% dead — far too late for a
+-- flash-sale burst — so we reclaim at 1%. This is the control that actually
+-- keeps bloat in check (measured: seats.n_dead_tup 0 -> 200 after 200 pays ->
+-- 0 after VACUUM).
+--
+-- HOT does NOT apply here, and fillfactor cannot change that: `status` is the
+-- predicate of idx_seats_available (WHERE status='AVAILABLE'), so Postgres
+-- treats it as an indexed column — flipping AVAILABLE->SOLD always writes a
+-- non-HOT tuple + a fresh index entry (verified: seats.n_tup_hot_upd stays 0).
+-- fillfactor 85 is kept only as a small same-page cushion for that non-HOT
+-- rewrite (heap_update prefers the old tuple's page) so the table grows less
+-- between vacuums; it buys page locality, not HOT.
 ALTER TABLE seats SET (
-    autovacuum_vacuum_scale_factor = 0.01,
-    fillfactor = 85
+    autovacuum_vacuum_scale_factor = 0.01,   -- reclaim at 1% dead, not the 20% default (the real bloat control)
+    fillfactor = 85                          -- same-page cushion for the non-HOT status flip (status is a partial-index predicate)
 );
