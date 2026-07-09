@@ -354,8 +354,8 @@ h1, h2, h3 { font-family: var(--display); font-weight: 600; margin: 0; line-heig
 .form-actions { display: flex; gap: 10px; flex-wrap: wrap; }
 
 /* ---------------- auth ---------------- */
-.auth { max-width: 400px; margin: clamp(48px, 12vh, 96px) auto; padding: 0 22px; }
-.auth__card { padding: 30px 28px; border-radius: 18px; background: linear-gradient(180deg, var(--surface-2), var(--surface)); border: 1px solid var(--line); box-shadow: var(--shadow); }
+.auth { min-height: 100vh; min-height: 100dvh; display: flex; align-items: center; justify-content: center; padding: 24px 22px; }
+.auth__card { width: 100%; max-width: 400px; padding: 30px 28px; border-radius: 18px; background: linear-gradient(180deg, var(--surface-2), var(--surface)); border: 1px solid var(--line); box-shadow: var(--shadow); }
 .auth h1 { font-size: 27px; margin: 6px 0 22px; }
 .auth form { display: grid; gap: 12px; }
 .auth__error { margin-top: 12px; color: #ef9a58; font-size: 13px; }
