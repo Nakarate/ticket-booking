@@ -64,18 +64,18 @@ Routes are declared in [main.go](../api/main.go) (`http.ServeMux`, method+patter
 > Target split into `features/` + `components/` + `lib/` is in [§ Target structure](#target-structure-in-progress).
 > Until then, jump by symbol inside `page.jsx`:
 
-| Concern | Symbol in [page.jsx](../web/app/page.jsx) | Line |
+| Concern | Symbol | Location |
 |---|---|---|
-| Root state, routing, `authFetch` (refresh-on-401) | `Page` | :34 |
-| Auth screen | `AuthForm` | :957 |
-| Customer landing (production cards) | `ProductionListing` | :614 |
-| Date/round picker (multi-show) | `ShowPicker` | :645 |
-| Admin dashboard (grouped by production) | `AdminPanel` | :687 |
-| Admin round row (open/close, cap) | `EventRow` | :797 |
-| Create event/round form (dropdown + 24h time) | `CreateEventForm` | :848 |
-| Confirm dialog (pay/cancel/logout/close) | `ConfirmModal` | :514 |
-| Production grouping (by series_id) | `groupEvents` :559 · `groupAdminEvents` | :578 |
-| Stat tile | `StatTile` | :788 |
+| Root state, routing, wires `authFetch` | `Page` | [page.jsx:23](../web/app/page.jsx) |
+| Auth screen | `AuthForm` | [page.jsx:871](../web/app/page.jsx) |
+| Customer landing (production cards) | `ProductionListing` | [page.jsx:537](../web/app/page.jsx) |
+| Date/round picker (multi-show) | `ShowPicker` | [page.jsx:568](../web/app/page.jsx) |
+| Admin dashboard (grouped by production) | `AdminPanel` | [page.jsx:610](../web/app/page.jsx) |
+| Admin round row (open/close, cap) | `EventRow` | [page.jsx:711](../web/app/page.jsx) |
+| Create event/round form (dropdown + 24h time) | `CreateEventForm` | [page.jsx:762](../web/app/page.jsx) |
+| Production grouping (by series_id) | `groupEvents` :482 · `groupAdminEvents` :501 | [page.jsx](../web/app/page.jsx) |
+| Confirm dialog (pay/cancel/logout/close) | `ConfirmModal` | [components/ConfirmModal.jsx](../web/components/ConfirmModal.jsx) |
+| Stat tile | `StatTile` | [components/StatTile.jsx](../web/components/StatTile.jsx) |
 
 Shell: [layout.jsx](../web/app/layout.jsx) · styles [globals.css](../web/app/globals.css).
 **API layer:** [lib/api.js](../web/lib/api.js) — base URL (`NEXT_PUBLIC_API`), token storage (`loadAuth`/`persistAuth`), `refreshTokens`/`logoutRequest`, and `createAuthFetch` (attach token + rotate on 401). `page.jsx` owns the React state and wires it via `createAuthFetch({ getAuth, setAuth })`.
@@ -127,6 +127,6 @@ updated as each module moves; unchecked = still in the flat file above.
 
 - [x] `lib/api.js` — `authFetch` + refresh-on-401 + base URL + token storage ✅
 - [ ] `features/auth` · `features/catalog` · `features/booking` · `features/admin`
-- [ ] `components/` — `ConfirmModal`, `StatTile`, buttons
+- [x] `components/` — `ConfirmModal`, `StatTile` ✅ (buttons still inline)
 
 **db** → `migrations/*.up.sql`+`*.down.sql` + `seed/` + `demo/`. **infra** → `deploy/`.

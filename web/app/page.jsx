@@ -1,6 +1,8 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { API, loadAuth, persistAuth, logoutRequest, createAuthFetch } from "../lib/api";
+import { ConfirmModal } from "../components/ConfirmModal";
+import { StatTile } from "../components/StatTile";
 
 const DEFAULT_EVENT_ID = "00000000-0000-0000-0000-000000000001";
 const DEFAULT_MAX_SEATS = 4;
@@ -465,39 +467,6 @@ export default function Page() {
 
 // ConfirmModal — a themed confirmation dialog. Esc / backdrop cancels, Enter
 // confirms. Used for money/destructive actions (pay, cancel, logout, close sale).
-function ConfirmModal({ title, message, confirmLabel, cancelLabel = "ยกเลิก", tone = "primary", onConfirm, onClose }) {
-  useEffect(() => {
-    const onKey = (e) => {
-      if (e.key === "Escape") onClose();
-      else if (e.key === "Enter") { onConfirm(); onClose(); }
-    };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [onConfirm, onClose]);
-
-  return (
-    <div className="modal-backdrop" data-testid="confirm-backdrop" onClick={onClose}>
-      <div className="modal" role="dialog" aria-modal="true" aria-label={title} onClick={(e) => e.stopPropagation()}>
-        <h3 className="modal__title">{title}</h3>
-        <p className="modal__msg">{message}</p>
-        <div className="modal__actions">
-          <button className="btn btn--ghost" data-testid="confirm-cancel" onClick={onClose}>
-            {cancelLabel}
-          </button>
-          <button
-            className={`btn ${tone === "danger" ? "btn--danger" : "btn--primary"}`}
-            data-testid="confirm-ok"
-            autoFocus
-            onClick={() => { onConfirm(); onClose(); }}
-          >
-            {confirmLabel}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function fmtEventDate(iso) {
   try {
     return new Date(iso).toLocaleString("th-TH", {
@@ -735,15 +704,6 @@ function AdminPanel({ authFetch, askConfirm, onChanged }) {
           )
         )}
       </div>
-    </div>
-  );
-}
-
-function StatTile({ label, value, accent }) {
-  return (
-    <div className="stat">
-      <div className="stat__label">{label}</div>
-      <div className={`stat__value${accent ? " accent" : ""}`}>{value}</div>
     </div>
   );
 }
