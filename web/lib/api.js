@@ -27,7 +27,8 @@ export function persistAuth(a) {
 
 // POST /api/refresh — rotate tokens. Returns the new token pair on success
 // ({ access_token, refresh_token, ... }) or null so the caller can log out.
-export async function refreshTokens(refreshToken) {
+// Internal: only createAuthFetch below needs it.
+async function refreshTokens(refreshToken) {
   const r = await fetch(`${API}/api/refresh`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },

@@ -11,8 +11,8 @@ export function fmtEventDate(iso) {
   }
 }
 
-// Short day+month, e.g. "5 ก.ค." — used for production date ranges.
-export function fmtDateShort(iso) {
+// Short day+month, e.g. "5 ก.ค." — used internally by showRangeLabel.
+function fmtDateShort(iso) {
   try {
     return new Date(iso).toLocaleDateString("th-TH", { day: "numeric", month: "short" });
   } catch {
