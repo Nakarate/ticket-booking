@@ -77,7 +77,8 @@ Routes are declared in [main.go](../api/main.go) (`http.ServeMux`, method+patter
 | Production grouping (by series_id) | `groupEvents` :559 · `groupAdminEvents` | :578 |
 | Stat tile | `StatTile` | :788 |
 
-Shell: [layout.jsx](../web/app/layout.jsx) · styles [globals.css](../web/app/globals.css). API base = `NEXT_PUBLIC_API`.
+Shell: [layout.jsx](../web/app/layout.jsx) · styles [globals.css](../web/app/globals.css).
+**API layer:** [lib/api.js](../web/lib/api.js) — base URL (`NEXT_PUBLIC_API`), token storage (`loadAuth`/`persistAuth`), `refreshTokens`/`logoutRequest`, and `createAuthFetch` (attach token + rotate on 401). `page.jsx` owns the React state and wires it via `createAuthFetch({ getAuth, setAuth })`.
 **`data-testid`s are a contract** with e2e ([e2e/booking.spec.js](../web/e2e/booking.spec.js), [auth.spec.js](../web/e2e/auth.spec.js), [admin.spec.js](../web/e2e/admin.spec.js)) — keep them stable when refactoring.
 
 ---
@@ -124,7 +125,7 @@ updated as each module moves; unchecked = still in the flat file above.
 
 **Web** → `app/` (thin routes) + `features/{auth,catalog,booking,admin}` + `components/` (shared UI) + `lib/api.js` (authFetch/refresh, one place).
 
-- [ ] `lib/api.js` — extract `authFetch` + refresh-on-401 + base URL
+- [x] `lib/api.js` — `authFetch` + refresh-on-401 + base URL + token storage ✅
 - [ ] `features/auth` · `features/catalog` · `features/booking` · `features/admin`
 - [ ] `components/` — `ConfirmModal`, `StatTile`, buttons
 

@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { API, loadAuth, persistAuth, logoutRequest, createAuthFetch } from "../lib/api";
 
-const API = process.env.NEXT_PUBLIC_API || "http://localhost:8080";
 const DEFAULT_EVENT_ID = "00000000-0000-0000-0000-000000000001";
 const DEFAULT_MAX_SEATS = 4;
 
@@ -18,19 +18,6 @@ const TIME_OPTIONS = Array.from({ length: 48 }, (_, i) => {
   return `${h}:${i % 2 === 0 ? "00" : "30"}`;
 });
 
-// Tokens live in localStorage for this demo. Production hardening: keep the
-// long-lived refresh token in an httpOnly cookie instead (needs HTTPS +
-// SameSite=None for the cross-origin :3000→:8080 dev split, so it's a deploy-
-// time change). React auto-escaping keeps the XSS surface low meanwhile.
-function loadAuth() {
-  if (typeof window === "undefined") return null;
-  try {
-    return JSON.parse(localStorage.getItem("auth") || "null");
-  } catch {
-    return null;
-  }
-}
-
 export default function Page() {
   // { access, refresh, userId, email, is_admin }
   const [auth, setAuthState] = useState(null);
@@ -40,10 +27,7 @@ export default function Page() {
   const setAuth = useCallback((a) => {
     authRef.current = a;
     setAuthState(a);
-    if (typeof window !== "undefined") {
-      if (a) localStorage.setItem("auth", JSON.stringify(a));
-      else localStorage.removeItem("auth");
-    }
+    persistAuth(a);
   }, []);
 
   useEffect(() => {
@@ -81,44 +65,14 @@ export default function Page() {
   const orderRef = useRef(null);
   orderRef.current = order;
 
-  // authFetch attaches the access token and, on a 401, transparently rotates
-  // via the refresh token once before giving up (which logs the user out).
-  const authFetch = useCallback(
-    async (url, opts = {}) => {
-      const a = authRef.current;
-      if (!a) throw new Error("not authenticated");
-      const withTok = (tok) =>
-        fetch(url, { ...opts, headers: { ...(opts.headers || {}), Authorization: `Bearer ${tok}` } });
-
-      let res = await withTok(a.access);
-      if (res.status === 401 && a.refresh) {
-        const r = await fetch(`${API}/api/refresh`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ refresh_token: a.refresh }),
-        });
-        if (r.ok) {
-          const d = await r.json();
-          setAuth({ ...a, access: d.access_token, refresh: d.refresh_token });
-          res = await withTok(d.access_token);
-        } else {
-          setAuth(null); // refresh dead → back to login
-        }
-      }
-      return res;
-    },
+  // authFetch attaches the access token and rotates on a 401 (see lib/api.js).
+  const authFetch = useMemo(
+    () => createAuthFetch({ getAuth: () => authRef.current, setAuth }),
     [setAuth]
   );
 
   const logout = useCallback(() => {
-    const a = authRef.current;
-    if (a?.refresh) {
-      fetch(`${API}/api/logout`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ refresh_token: a.refresh }),
-      }).catch(() => {});
-    }
+    logoutRequest(authRef.current?.refresh);
     setAuth(null);
     setOrder(null);
     setSelected([]);
