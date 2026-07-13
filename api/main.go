@@ -3,18 +3,17 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"errors"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
-	"strconv"
 	"syscall"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
+
+	"ticket-booking/api/internal/config"
 )
 
 type app struct {
@@ -36,68 +35,32 @@ func getenv(key, fallback string) string {
 	return fallback
 }
 
-// weakSecrets are values that must never sign real tokens. Anyone with the repo
-// knows them, so a token signed with one is forgeable by anyone.
-var weakSecrets = map[string]bool{
-	"dev-secret": true, "dev-secret-change-in-prod": true,
-	"changeme": true, "secret": true, "password": true, "test-secret": true,
-}
-
-// validateJWTSecret fails closed: an empty secret is always fatal, and in
-// production a short or known-weak secret is rejected outright. In non-prod it
-// only warns, so local dev still boots.
-func validateJWTSecret(secret, env string) error {
-	if secret == "" {
-		return errors.New("JWT_SECRET is required (set a strong random value)")
-	}
-	if env == "production" {
-		if len(secret) < 32 {
-			return fmt.Errorf("JWT_SECRET too short for production (%d chars, need >= 32)", len(secret))
-		}
-		if weakSecrets[secret] {
-			return errors.New("JWT_SECRET is a known weak/default value; generate a unique secret")
-		}
-	} else if weakSecrets[secret] || len(secret) < 32 {
-		log.Printf("WARNING: weak JWT_SECRET in %q mode — never use this in production", env)
-	}
-	return nil
-}
-
 func main() {
 	ctx := context.Background()
 
-	db, err := pgxpool.New(ctx, getenv("DATABASE_URL",
-		"postgres://ticket:ticket@localhost:5432/ticket?sslmode=disable"))
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatal("config: ", err)
+	}
+
+	db, err := pgxpool.New(ctx, cfg.DatabaseURL)
 	if err != nil {
 		log.Fatal("pg connect: ", err)
 	}
 	defer db.Close()
 
-	rdb := redis.NewClient(&redis.Options{Addr: getenv("REDIS_ADDR", "localhost:6379")})
+	rdb := redis.NewClient(&redis.Options{Addr: cfg.RedisAddr})
 	defer rdb.Close()
 
-	jwtSecret := getenv("JWT_SECRET", "")
-	if err := validateJWTSecret(jwtSecret, getenv("APP_ENV", "development")); err != nil {
-		log.Fatal("JWT_SECRET: ", err)
-	}
-
-	ttlSec, _ := strconv.Atoi(getenv("HOLD_TTL_SECONDS", "600"))
-	accessSec, _ := strconv.Atoi(getenv("ACCESS_TTL_SECONDS", "900"))      // 15m
-	refreshSec, _ := strconv.Atoi(getenv("REFRESH_TTL_SECONDS", "604800")) // 7d
-	maxHeld, _ := strconv.Atoi(getenv("MAX_HELD_SEATS_PER_USER", "8"))
-	if maxHeld <= 0 {
-		maxHeld = 8
-	}
-	powDifficulty, _ := strconv.Atoi(getenv("POW_DIFFICULTY", "0"))
 	a := &app{
 		db:            db,
 		rdb:           rdb,
-		jwtSecret:     []byte(jwtSecret),
-		holdTTL:       time.Duration(ttlSec) * time.Second,
-		accessTTL:     time.Duration(accessSec) * time.Second,
-		refreshTTL:    time.Duration(refreshSec) * time.Second,
-		maxHeldSeats:  maxHeld,
-		powDifficulty: powDifficulty,
+		jwtSecret:     []byte(cfg.JWTSecret),
+		holdTTL:       cfg.HoldTTL,
+		accessTTL:     cfg.AccessTTL,
+		refreshTTL:    cfg.RefreshTTL,
+		maxHeldSeats:  cfg.MaxHeldSeats,
+		powDifficulty: cfg.PoWDifficulty,
 		attempts:      make(chan bookingAttempt, 10000),
 	}
 
@@ -160,7 +123,7 @@ func main() {
 
 	rl := newRateLimiter(rdb)
 	srv := &http.Server{
-		Addr:    ":" + getenv("PORT", "8080"),
+		Addr:    ":" + cfg.Port,
 		Handler: cors(logRequests(rl.middleware(mux))),
 		// Timeouts: a slow or malicious client must not pin a goroutine forever.
 		ReadHeaderTimeout: 5 * time.Second,

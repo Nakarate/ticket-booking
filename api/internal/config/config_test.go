@@ -1,8 +1,8 @@
-package main
+package config
 
 import "testing"
 
-// validateJWTSecret must fail closed: empty is always fatal, and production
+// ValidateJWTSecret must fail closed: empty is always fatal, and production
 // rejects short or known-weak secrets while dev only warns.
 func TestValidateJWTSecret(t *testing.T) {
 	strong := "9f3c1e7a2b8d4056af17c9e0b3d6512e7a84f0c19d2b6e35" // 48 chars
@@ -23,9 +23,9 @@ func TestValidateJWTSecret(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			err := validateJWTSecret(c.secret, c.env)
+			err := ValidateJWTSecret(c.secret, c.env)
 			if (err != nil) != c.wantErr {
-				t.Fatalf("validateJWTSecret(%q, %q) err=%v, wantErr=%v", c.secret, c.env, err, c.wantErr)
+				t.Fatalf("ValidateJWTSecret(%q, %q) err=%v, wantErr=%v", c.secret, c.env, err, c.wantErr)
 			}
 		})
 	}

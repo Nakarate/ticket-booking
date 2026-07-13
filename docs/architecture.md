@@ -23,13 +23,14 @@ The oversell invariant is the whole point; before touching booking code read the
 
 ## API — Go (`api/`, module `ticket-booking/api`, package `main`)
 
-> Currently one flat `package main`. Target layout (`cmd/` + `internal/<domain>`)
-> is in [§ Target structure](#target-structure-in-progress); this table maps the
-> code **as it is now**.
+> Mostly flat `package main` (file-per-concern, idiomatic Go). Config has been
+> pulled into `internal/config`; the rest still hangs off one shared `app` struct.
+> Full `internal/<domain>` split is in [§ Target structure](#target-structure-in-progress).
 
 | Module | File | Owns | Key symbols |
 |---|---|---|---|
-| Bootstrap | [main.go](../api/main.go) | env config, pgxpool, Redis, ServeMux routes, middleware wiring, graceful shutdown, background workers | `main`, `validateJWTSecret` :49, `expiryWorker` :191, `expireOverdueOrders` :214, `cors`/`logRequests` middleware, `writeJSON`/`writeErr` |
+| Config | [internal/config/config.go](../api/internal/config/config.go) | load all env config + fail-closed JWT-secret validation | `Config`, `Load` :67, `ValidateJWTSecret` :46 (tested in [config_test.go](../api/internal/config/config_test.go)) |
+| Bootstrap | [main.go](../api/main.go) | pgxpool, Redis, ServeMux routes, middleware wiring, graceful shutdown, background workers | `main` (calls `config.Load`), `expiryWorker` :154, `expireOverdueOrders` :177, `cors`/`logRequests` middleware, `writeJSON`/`writeErr` |
 | Booking / seats | [handlers.go](../api/handlers.go) | the two-layer oversell guard, seat map, events list, pay/cancel | `holdScript` Lua :178, `createBooking` :187, `payOrder` :396, `cancelOrder` :507, `listSeats` :59, `listEvents` :129, `listOrders` :350, `auth()` mw :33, `holdKey` :124 |
 | Auth | [auth.go](../api/auth.go) | register/login/refresh/logout, JWT + refresh tokens, bcrypt | `register` :73, `login` :122, `refresh` :163, `logout` :191, `signAccess` :28, `issueTokens` :50, `dummyHash` :24 (timing) |
 | Admin | [admin.go](../api/admin.go) | event/round CRUD, production grouping (series_id), sales stats, admin bootstrap | `createAdminEvent` :105, `listAdminEvents` :54, `patchAdminEvent` :237, `ensureAdmin` :20, `adminAuth` mw :40 |
@@ -114,10 +115,10 @@ updated as each module moves; unchecked = still in the flat file above.
 
 **API** → `cmd/api/main.go` (thin bootstrap) + `internal/{config,httpx,auth,booking,catalog,admin,analytics,ratelimit,pow,platform}` — each domain owns `handler.go` / `service.go` / `repo.go`.
 
+- [x] `internal/config` — env load + `ValidateJWTSecret` (fail-closed) ✅
 - [ ] `internal/platform/{postgres,redis}` — infra clients
-- [ ] `internal/config` — env + `validateJWTSecret`
 - [ ] `internal/httpx` — server, middleware chain, respond helpers
-- [ ] `internal/auth` · `internal/booking` · `internal/catalog` · `internal/admin` · `internal/analytics` · `internal/ratelimit` · `internal/pow`
+- [ ] `internal/auth` · `internal/booking` · `internal/catalog` · `internal/admin` · `internal/analytics` · `internal/ratelimit` · `internal/pow` — **needs the shared `app` struct split into per-domain structs (larger/riskier)**
 
 **Web** → `app/` (thin routes) + `features/{auth,catalog,booking,admin}` + `components/` (shared UI) + `lib/api.js` (authFetch/refresh, one place).
 
