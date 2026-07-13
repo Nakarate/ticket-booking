@@ -49,7 +49,7 @@ docker run --rm --network host -v $PWD/k6:/k6 grafana/k6 run /k6/race.js
 docker run --rm -e API=http://host.docker.internal:8080 -v $PWD/k6:/k6 grafana/k6 run /k6/race.js
 ```
 
-`go.sum` is gitignored; `go test`/`go build` regenerate it. Run `go` commands from inside `api/` (that is where `go.mod` lives).
+`go.sum` is committed (required for reproducible builds + CI — `go vet`/`go test` fail on a fresh checkout without it). Run `go` commands from inside `api/` (that is where `go.mod` lives).
 
 ## Architecture: the two-layer oversell guard
 
