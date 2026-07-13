@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+> 🗺️ **Jump to a module without scanning:** [docs/architecture.md](docs/architecture.md) is the
+> module map — per-file responsibilities, key symbols with line numbers, the route→handler
+> table, and a "change X → go here" index. Start there to locate code; this file explains *why*.
+
 ## What this is
 
 A flash-sale ticket booking MVP (reserved seating) whose one hard invariant is **oversell = 0** under high concurrent load. It is a demo/interview artifact, not production — some simplifications (mock payment gateway, in-memory rate limiter) are deliberate and annotated in the code with what production would do instead. Auth is real: password + bcrypt with short access JWT + refresh tokens (see `auth.go`).
