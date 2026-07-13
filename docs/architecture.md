@@ -60,25 +60,21 @@ Routes are declared in [main.go](../api/main.go) (`http.ServeMux`, method+patter
 
 ## Web — Next.js 14 App Router (`web/`, plain JSX)
 
-> Currently one client component, [app/page.jsx](../web/app/page.jsx) (~1057 lines).
-> Target split into `features/` + `components/` + `lib/` is in [§ Target structure](#target-structure-in-progress).
-> Until then, jump by symbol inside `page.jsx`:
+Split into `app/` (orchestrator) + `features/` + `components/` + `lib/`. The
+booking flow (seat map, hold countdown, pay/cancel, "my bookings") still lives in
+`Page` — it is the stateful orchestrator that wires everything together.
 
-| Concern | Symbol | Location |
+| Module | File | Owns |
 |---|---|---|
-| Root state, routing, wires `authFetch` | `Page` | [page.jsx:23](../web/app/page.jsx) |
-| Auth screen | `AuthForm` | [page.jsx:871](../web/app/page.jsx) |
-| Customer landing (production cards) | `ProductionListing` | [page.jsx:537](../web/app/page.jsx) |
-| Date/round picker (multi-show) | `ShowPicker` | [page.jsx:568](../web/app/page.jsx) |
-| Admin dashboard (grouped by production) | `AdminPanel` | [page.jsx:610](../web/app/page.jsx) |
-| Admin round row (open/close, cap) | `EventRow` | [page.jsx:711](../web/app/page.jsx) |
-| Create event/round form (dropdown + 24h time) | `CreateEventForm` | [page.jsx:762](../web/app/page.jsx) |
-| Production grouping (by series_id) | `groupEvents` :482 · `groupAdminEvents` :501 | [page.jsx](../web/app/page.jsx) |
-| Confirm dialog (pay/cancel/logout/close) | `ConfirmModal` | [components/ConfirmModal.jsx](../web/components/ConfirmModal.jsx) |
-| Stat tile | `StatTile` | [components/StatTile.jsx](../web/components/StatTile.jsx) |
+| Orchestrator + booking view | [app/page.jsx](../web/app/page.jsx) `Page` :21 | root state, routing between views, seat map + hold/pay/cancel, my-bookings; wires `authFetch` |
+| API layer | [lib/api.js](../web/lib/api.js) | base URL (`NEXT_PUBLIC_API`), token storage (`loadAuth`/`persistAuth`), `refreshTokens`/`logoutRequest`, `createAuthFetch` (attach token + rotate on 401) |
+| Formatting | [lib/format.js](../web/lib/format.js) | `fmtEventDate`, `fmtDateShort`, `showRangeLabel` (Thai locale) |
+| Auth | [features/auth/AuthForm.jsx](../web/features/auth/AuthForm.jsx) | login/register form, inline PoW solver, error text |
+| Catalog | [features/catalog/ProductionListing.jsx](../web/features/catalog/ProductionListing.jsx) · [ShowPicker.jsx](../web/features/catalog/ShowPicker.jsx) · [grouping.js](../web/features/catalog/grouping.js) | production cards, date/round picker, `groupEvents`/`groupAdminEvents` (by series_id) |
+| Admin | [features/admin/AdminPanel.jsx](../web/features/admin/AdminPanel.jsx) | dashboard (grouped), `EventRow` (open/close, cap), `CreateEventForm` (dropdown + 24h time), `TIME_OPTIONS` |
+| Shared UI | [components/ConfirmModal.jsx](../web/components/ConfirmModal.jsx) · [components/StatTile.jsx](../web/components/StatTile.jsx) | confirm dialog (pay/cancel/logout/close), metric tile |
 
 Shell: [layout.jsx](../web/app/layout.jsx) · styles [globals.css](../web/app/globals.css).
-**API layer:** [lib/api.js](../web/lib/api.js) — base URL (`NEXT_PUBLIC_API`), token storage (`loadAuth`/`persistAuth`), `refreshTokens`/`logoutRequest`, and `createAuthFetch` (attach token + rotate on 401). `page.jsx` owns the React state and wires it via `createAuthFetch({ getAuth, setAuth })`.
 **`data-testid`s are a contract** with e2e ([e2e/booking.spec.js](../web/e2e/booking.spec.js), [auth.spec.js](../web/e2e/auth.spec.js), [admin.spec.js](../web/e2e/admin.spec.js)) — keep them stable when refactoring.
 
 ---
@@ -125,8 +121,8 @@ updated as each module moves; unchecked = still in the flat file above.
 
 **Web** → `app/` (thin routes) + `features/{auth,catalog,booking,admin}` + `components/` (shared UI) + `lib/api.js` (authFetch/refresh, one place).
 
-- [x] `lib/api.js` — `authFetch` + refresh-on-401 + base URL + token storage ✅
-- [ ] `features/auth` · `features/catalog` · `features/booking` · `features/admin`
+- [x] `lib/api.js` (authFetch + refresh + token storage) · `lib/format.js` (date helpers) ✅
+- [x] `features/auth` ✅ · `features/catalog` ✅ · `features/admin` ✅  — booking flow stays in `Page` (the orchestrator)
 - [x] `components/` — `ConfirmModal`, `StatTile` ✅ (buttons still inline)
 
 **db** → `migrations/*.up.sql`+`*.down.sql` + `seed/` + `demo/`. **infra** → `deploy/`.
